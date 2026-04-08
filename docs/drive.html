@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Drive View</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0C1018;overflow:hidden;touch-action:none}
+canvas{display:block;width:100vw;height:100vh}
+</style>
+</head>
+<body>
+<script>
+// === Scene setup ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0C1018);
+scene.fog = new THREE.FogExp2(0x0C1018, 0.015);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 500);
+camera.position.set(0, 4.5, 8);
+camera.lookAt(0, 0.5, -5);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+// Controls (limited)
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.target.set(0, 0.5, -2);
+controls.maxPolarAngle = Math.PI * 0.45;
+controls.minPolarAngle = Math.PI * 0.1;
+controls.minDistance = 4;
+controls.maxDistance = 15;
+controls.enablePan = false;
+
+// === Lighting ===
+scene.add(new THREE.AmbientLight(0x334466, 0.8));
+
+const moonLight = new THREE.DirectionalLight(0x6688bb, 0.6);
+moonLight.position.set(-5, 15, 10);
+moonLight.castShadow = true;
+moonLight.shadow.mapSize.set(1024, 1024);
+moonLight.shadow.camera.near = 0.5;
+moonLight.shadow.camera.far = 50;
+moonLight.shadow.camera.left = -20;
+moonLight.shadow.camera.right = 20;
+moonLight.shadow.camera.top = 20;
+moonLight.shadow.camera.bottom = -20;
+scene.add(moonLight);
+
+const fillLight = new THREE.DirectionalLight(0x223344, 0.3);
+fillLight.position.set(5, 8, -5);
+scene.add(fillLight);
+
+// Headlight spots
+const hlL = new THREE.SpotLight(0xffeedd, 2, 30, Math.PI*0.15, 0.5);
+hlL.position.set(-0.5, 0.5, -1.5);
+hlL.target.position.set(-1, 0, -15);
+scene.add(hlL); scene.add(hlL.target);
+
+const hlR = new THREE.SpotLight(0xffeedd, 2, 30, Math.PI*0.15, 0.5);
+hlR.position.set(0.5, 0.5, -1.5);
+hlR.target.position.set(1, 0, -15);
+scene.add(hlR); scene.add(hlR.target);
+
+// === Ground ===
+const groundGeo = new THREE.PlaneGeometry(200, 200);
+const groundMat = new THREE.MeshStandardMaterial({color:0x0a120a, roughness:0.95});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.01;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// === Road ===
+const roadW = 8;
+const roadLen = 200;
+const roadGeo = new THREE.PlaneGeometry(roadW, roadLen);
+const roadMat = new THREE.MeshStandardMaterial({color:0x2a2e36, roughness:0.85});
+const road = new THREE.Mesh(roadGeo, roadMat);
+road.rotation.x = -Math.PI/2;
+road.position.set(0, 0.005, -roadLen/2 + 10);
+road.receiveShadow = true;
+scene.add(road);
+
+// Road edge lines
+function makeEdgeLine(x) {
+  const geo = new THREE.PlaneGeometry(0.12, roadLen);
+  const mat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.4});
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.01, -roadLen/2 + 10);
+  scene.add(m);
+}
+makeEdgeLine(-roadW/2);
+makeEdgeLine(roadW/2);
+
+// Lane dashes
+const dashGroup = new THREE.Group();
+for (let lane = -1; lane <= 1; lane++) {
+  for (let i = 0; i < 40; i++) {
+    const geo = new THREE.PlaneGeometry(0.1, 2);
+    const mat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.25});
+    const dash = new THREE.Mesh(geo, mat);
+    dash.rotation.x = -Math.PI/2;
+    dash.position.set(lane * roadW/4, 0.01, -i * 5);
+    dashGroup.add(dash);
+  }
+}
+scene.add(dashGroup);
+
+// Autopilot blue path
+const pathGeo = new THREE.PlaneGeometry(1.5, roadLen);
+const pathMat = new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.08});
+const pathMesh = new THREE.Mesh(pathGeo, pathMat);
+pathMesh.rotation.x = -Math.PI/2;
+pathMesh.position.set(0, 0.008, -roadLen/2 + 10);
+scene.add(pathMesh);
+
+// === Buildings ===
+const buildingMat = new THREE.MeshStandardMaterial({color:0x151d28, roughness:0.9});
+const windowMat = new THREE.MeshBasicMaterial({color:0x334466, transparent:true, opacity:0.3});
+const rng = new (function(){let s=42;this.next=function(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}})();
+
+for (let side = -1; side <= 1; side += 2) {
+  for (let i = 0; i < 25; i++) {
+    const h = 3 + rng.next() * 12;
+    const w = 2 + rng.next() * 4;
+    const d = 2 + rng.next() * 3;
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const bldg = new THREE.Mesh(geo, buildingMat);
+    const x = side * (roadW/2 + 3 + rng.next() * 8);
+    const z = -i * 8 + rng.next() * 3;
+    bldg.position.set(x, h/2, z);
+    bldg.castShadow = true;
+    scene.add(bldg);
+
+    // Windows
+    if (h > 5) {
+      for (let wy = 1.5; wy < h - 1; wy += 1.8) {
+        for (let wx = -w/3; wx <= w/3; wx += 1.2) {
+          if (rng.next() > 0.4) {
+            const wGeo = new THREE.PlaneGeometry(0.5, 0.6);
+            const win = new THREE.Mesh(wGeo, windowMat);
+            win.position.set(x + (side > 0 ? -w/2 - 0.01 : w/2 + 0.01), wy, z + wx);
+            win.rotation.y = side > 0 ? Math.PI/2 : -Math.PI/2;
+            scene.add(win);
+          }
+        }
+      }
+    }
+
+    // Trees
+    if (rng.next() > 0.5) {
+      const treeH = 1.5 + rng.next() * 2;
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.12, treeH),
+        new THREE.MeshStandardMaterial({color:0x3a2a1a})
+      );
+      trunk.position.set(side * (roadW/2 + 1.5), treeH/2, z + 2);
+      scene.add(trunk);
+      const crown = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8 + rng.next() * 0.5, 6, 6),
+        new THREE.MeshStandardMaterial({color:0x1a3a1a})
+      );
+      crown.position.set(side * (roadW/2 + 1.5), treeH + 0.3, z + 2);
+      scene.add(crown);
+    }
+  }
+}
+
+// === Ego car (loaded GLB) ===
+let egoCar = null;
+const loader = new THREE.GLTFLoader();
+loader.load('models/lowpoly_car.glb', (gltf) => {
+  egoCar = gltf.scene;
+  egoCar.scale.set(1.5, 1.5, 1.5);
+  egoCar.position.set(0, 0.05, 0);
+  egoCar.rotation.y = Math.PI; // face forward (-Z)
+  egoCar.traverse(c => {
+    if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+  });
+  scene.add(egoCar);
+});
+
+// === Detected vehicles ===
+const detectedCars = [];
+const carColors = {
+  car: 0x3B82F6,
+  truck: 0xFBBF24,
+  pedestrian: 0xF87171,
+  bike: 0x34D399,
+};
+
+function createDetectedCar(type, x, z) {
+  let mesh;
+  const color = carColors[type] || 0x888888;
+  const mat = new THREE.MeshStandardMaterial({color, transparent:true, opacity:0.6, roughness:0.5});
+
+  if (type === 'car') {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 3.5), mat);
+    body.position.y = 0.5;
+    g.add(body);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.4, 1.8), mat);
+    roof.position.set(0, 0.95, -0.2);
+    g.add(roof);
+    // Tail lights
+    const tlMat = new THREE.MeshBasicMaterial({color:0xff3333});
+    const tl1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.05), tlMat);
+    tl1.position.set(-0.6, 0.5, 1.76); g.add(tl1);
+    const tl2 = tl1.clone(); tl2.position.x = 0.6; g.add(tl2);
+    mesh = g;
+  } else if (type === 'truck') {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 2.5, 5), mat);
+    body.position.y = 1.5; g.add(body);
+    mesh = g;
+  } else if (type === 'pedestrian') {
+    const g = new THREE.Group();
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.8), mat);
+    torso.position.y = 1; g.add(torso);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15), mat);
+    head.position.y = 1.55; g.add(head);
+    mesh = g;
+  } else {
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 1.5), mat);
+    mesh.position.y = 0.6;
+  }
+
+  mesh.position.set(x, 0, z);
+  scene.add(mesh);
+  return mesh;
+}
+
+// === State from Flutter ===
+let speed = 0;
+let steer = 0;
+let dashOffset = 0;
+
+window.updateDrive = function(spd, str, objs) {
+  speed = spd;
+  steer = str;
+
+  // Update detected objects
+  // Remove old
+  detectedCars.forEach(c => scene.remove(c));
+  detectedCars.length = 0;
+
+  if (objs) {
+    try {
+      const parsed = typeof objs === 'string' ? JSON.parse(objs) : objs;
+      parsed.forEach(o => {
+        const laneX = o.x * 4; // map -0.5..0.5 to road width
+        const dist = (1 - o.y) * 60 + 5; // map y to distance
+        const mesh = createDetectedCar(o.type, laneX, -dist);
+        detectedCars.push(mesh);
+      });
+    } catch(e) {}
+  }
+};
+
+// === Animate ===
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+
+  // Move lane dashes (road flow)
+  dashOffset += speed * dt * 0.15;
+  dashGroup.children.forEach((dash, i) => {
+    const baseZ = -(Math.floor(i / 3)) * 5;
+    const lane = (i % 3) - 1;
+    dash.position.z = ((baseZ + dashOffset) % 200) - 100;
+    dash.position.x = lane * roadW / 4;
+  });
+
+  // Ego car steering
+  if (egoCar) {
+    egoCar.rotation.y = Math.PI + THREE.MathUtils.degToRad(steer * -0.5);
+  }
+
+  // Camera follow
+  controls.target.lerp(new THREE.Vector3(steer * 0.02, 0.5, -2), 0.05);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
