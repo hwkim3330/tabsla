@@ -3,342 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Tabsla 3D Viewer</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
+<title>Tabsla 3D</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#f5f5f7;overflow:hidden;color:#1d1d1f;touch-action:manipulation}
-.app{display:flex;height:100vh;height:100dvh}
-#c3d{flex:1;background:#f0f0f2}
-.panel{width:260px;background:#fff;border-left:1px solid rgba(0,0,0,.06);overflow-y:auto;padding:14px}
-.panel::-webkit-scrollbar{width:3px}.panel::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:2px}
-
-.tabs{display:flex;background:rgba(0,0,0,.04);border-radius:10px;padding:3px;margin-bottom:14px}
-.tab{flex:1;padding:7px 0;border-radius:8px;border:none;background:0;color:#6e6e73;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s}
-.tab.sel{background:#fff;color:#1d1d1f;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-
-.sec-t{font-size:9px;font-weight:700;color:#aeaeb2;letter-spacing:.8px;text-transform:uppercase;margin:14px 0 8px}
-.ctrl{margin-bottom:10px}
-.ctrl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.ctrl-label{font-size:12px;color:#6e6e73;font-weight:500}
-.ctrl-val{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:#1d1d1f}
-
-input[type=range]{width:100%;height:4px;appearance:none;-webkit-appearance:none;background:#e5e5ea;border-radius:2px;outline:0;cursor:pointer}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.04)}
-
-.presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:8px}
-.pb{padding:8px;border-radius:8px;border:none;background:rgba(0,0,0,.03);color:#3a3a3c;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
-.pb:active{transform:scale(.95)}.pb.on{background:#007aff;color:#fff}
-
-.info{display:flex;gap:6px;margin-top:12px}
-.info-card{flex:1;background:rgba(0,0,0,.02);border-radius:8px;padding:8px;text-align:center}
-.info-card .v{font-size:16px;font-weight:700}.info-card .l{font-size:8px;color:#aeaeb2;font-weight:600;text-transform:uppercase}
-
-@media(max-width:600px){.panel{width:200px;padding:10px}}
+body{background:#f0f0f2;overflow:hidden;font-family:-apple-system,sans-serif}
+model-viewer{width:100vw;height:100vh;--poster-color:#f0f0f2;--progress-bar-color:#3B82F6}
+.tabs{position:fixed;top:8px;left:8px;z-index:10;display:flex;gap:4px}
+.tab{padding:7px 16px;border-radius:8px;border:none;font-size:12px;font-weight:600;
+  cursor:pointer;color:#888;background:rgba(0,0,0,.04);transition:.2s;font-family:inherit}
+.tab.sel{color:#fff;background:#3B82F6}
+.tab:active{transform:scale(.95)}
 </style>
 </head>
 <body>
-<div class="app">
-<canvas id="c3d"></canvas>
-<div class="panel">
-  <div class="tabs">
-    <button class="tab sel" onclick="switchView('car',this)">Car</button>
-    <button class="tab" onclick="switchView('seat',this)">Seat</button>
-  </div>
 
-  <!-- Car view info -->
-  <div id="carPanel">
-    <div class="sec-t">Vehicle</div>
-    <div class="info">
-      <div class="info-card"><div class="v" style="color:#34c759">87%</div><div class="l">Battery</div></div>
-      <div class="info-card"><div class="v">348km</div><div class="l">Range</div></div>
-    </div>
-    <div class="info" style="margin-top:6px">
-      <div class="info-card"><div class="v" style="color:#34c759">Locked</div><div class="l">Status</div></div>
-      <div class="info-card"><div class="v">36</div><div class="l">PSI</div></div>
-    </div>
-  </div>
-
-  <!-- Seat controls -->
-  <div id="seatPanel" style="display:none">
-    <div class="sec-t">Presets</div>
-    <div class="presets" id="presetBtns">
-      <button class="pb" onclick="preset('drive')">Drive</button>
-      <button class="pb" onclick="preset('sport')">Sport</button>
-      <button class="pb" onclick="preset('relax')">Relax</button>
-      <button class="pb" onclick="preset('entry')">Entry</button>
-      <button class="pb" onclick="preset('flat')">Flat</button>
-      <button class="pb" onclick="preset('zero')">Reset</button>
-    </div>
-
-    <div class="sec-t">Seat Controls</div>
-    <div id="sliders"></div>
-  </div>
+<div class="tabs" id="tabs">
+  <button class="tab sel" onclick="sw('car',this)">Exterior</button>
+  <button class="tab" onclick="sw('seat',this)">Seat</button>
 </div>
-</div>
+
+<model-viewer id="mv"
+  src="models/ferrari.glb"
+  alt="3D Model"
+  auto-rotate
+  auto-rotate-delay="0"
+  rotation-per-second="8deg"
+  camera-controls
+  touch-action="pan-y"
+  shadow-intensity="1"
+  shadow-softness="0.8"
+  exposure="2"
+  tone-mapping="commerce"
+  environment-image="neutral"
+  camera-orbit="30deg 65deg 3.5m"
+  min-camera-orbit="auto auto 1m"
+  max-camera-orbit="auto auto 10m"
+  field-of-view="28deg"
+  style="background-color:#f0f0f2"
+></model-viewer>
 
 <script>
-// === Config ===
-const SEAT_AXES = [
-  {id:'slide',   label:'Fore / Aft',   min:-80, max:80,  unit:'mm'},
-  {id:'height',  label:'Height',        min:0,   max:60,  unit:'mm'},
-  {id:'tilt',    label:'Tilt',          min:-5,  max:8,   unit:'°'},
-  {id:'recline', label:'Recline',       min:0,   max:40,  unit:'°'},
-  {id:'hrH',     label:'Headrest',      min:0,   max:100, unit:'%'},
-  {id:'bolster', label:'Bolster',       min:0,   max:100, unit:'%'},
-  {id:'lumbar',  label:'Lumbar',        min:0,   max:100, unit:'%'},
-];
-
-const PRESETS = {
-  drive:  {slide:0,  height:20,tilt:2,  recline:8, hrH:30, bolster:20,lumbar:40},
-  sport:  {slide:30, height:0, tilt:-3, recline:3, hrH:50, bolster:80,lumbar:60},
-  relax:  {slide:-40,height:40,tilt:5,  recline:35,hrH:60, bolster:10,lumbar:50},
-  entry:  {slide:-80,height:0, tilt:0,  recline:0, hrH:0,  bolster:0, lumbar:0},
-  flat:   {slide:0,  height:50,tilt:8,  recline:40,hrH:100,bolster:0, lumbar:30},
-  zero:   {slide:0,  height:0, tilt:0,  recline:0, hrH:0,  bolster:0, lumbar:0},
+const mv = document.getElementById('mv');
+const cfg = {
+  car:  {src:'models/ferrari.glb',   orbit:'30deg 65deg 3.5m', fov:'28deg', exp:2},
+  seat: {src:'models/car-seat.glb',  orbit:'20deg 70deg 1.2m', fov:'32deg', exp:2.5},
 };
 
-let S = {slide:0,height:0,tilt:0,recline:0,hrH:0,bolster:0,lumbar:0};
-let targetS = null;
-
-// === Three.js ===
-let scene, cam, rend, ctrl;
-let carModel, seatGroup;
-let cushion, backrest, headrest, lBolster, rBolster, backPivot;
-let currentView = 'car';
-
-function init() {
-  const cv = document.getElementById('c3d');
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f2);
-  scene.fog = new THREE.Fog(0xf0f0f2, 6, 14);
-
-  cam = new THREE.PerspectiveCamera(35, cv.clientWidth/cv.clientHeight, 0.01, 100);
-  cam.position.set(2.5, 1.5, 3);
-
-  rend = new THREE.WebGLRenderer({canvas:cv, antialias:true});
-  rend.setPixelRatio(Math.min(devicePixelRatio, 2));
-  rend.setSize(cv.clientWidth, cv.clientHeight);
-  rend.shadowMap.enabled = true;
-  rend.shadowMap.type = THREE.PCFSoftShadowMap;
-  rend.toneMapping = THREE.ACESFilmicToneMapping;
-  rend.toneMappingExposure = 1.4;
-  rend.outputEncoding = THREE.sRGBEncoding;
-
-  ctrl = new THREE.OrbitControls(cam, cv);
-  ctrl.enableDamping = true; ctrl.dampingFactor = 0.08;
-  ctrl.target.set(0, 0.5, 0);
-  ctrl.minDistance = 1; ctrl.maxDistance = 8;
-
-  // Studio lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
-  const key = new THREE.DirectionalLight(0xffffff, 1.2);
-  key.position.set(3, 5, 4); key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0005;
-  scene.add(key);
-
-  const fill = new THREE.DirectionalLight(0xf0f0ff, 0.6);
-  fill.position.set(-3, 3, -2); scene.add(fill);
-
-  const rim = new THREE.DirectionalLight(0xffffff, 0.4);
-  rim.position.set(0, 6, -3); scene.add(rim);
-
-  const warm = new THREE.PointLight(0xffe8d6, 0.3, 6);
-  warm.position.set(0, 0.5, 2); scene.add(warm);
-
-  // Env map for reflections
-  const pmrem = new THREE.PMREMGenerator(rend);
-  scene.environment = pmrem.fromScene(new THREE.Scene()).texture;
-
-  // Floor
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(10,10),
-    new THREE.MeshStandardMaterial({color:0xe8e8e8, roughness:0.9})
-  );
-  floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
-  scene.add(floor);
-
-  const grid = new THREE.GridHelper(6, 24, 0xd0d0d0, 0xe0e0e0);
-  grid.material.opacity = 0.4; grid.material.transparent = true;
-  scene.add(grid);
-
-  loadCarModel();
-  buildSeat();
-  buildSliders();
-
-  window.addEventListener('resize', () => {
-    cam.aspect = cv.clientWidth/cv.clientHeight;
-    cam.updateProjectionMatrix();
-    rend.setSize(cv.clientWidth, cv.clientHeight);
-  });
-
-  animate();
+function sw(id, btn) {
+  const c = cfg[id];
+  mv.src = c.src;
+  mv.cameraOrbit = c.orbit;
+  mv.fieldOfView = c.fov;
+  mv.exposure = c.exp;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('sel'));
+  if(btn) btn.classList.add('sel');
 }
 
-function loadCarModel() {
-  const loader = new THREE.GLTFLoader();
-  loader.load('models/ferrari.glb', gltf => {
-    carModel = gltf.scene;
-    carModel.scale.set(1, 1, 1);
-    carModel.position.set(0, 0, 0);
-    carModel.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; }});
-    scene.add(carModel);
-  });
-}
-
-function buildSeat() {
-  seatGroup = new THREE.Group();
-  seatGroup.visible = false;
-  scene.add(seatGroup);
-
-  const white = () => new THREE.MeshStandardMaterial({color:0xf5f0eb, roughness:0.45, metalness:0.0});
-  const frame = new THREE.MeshStandardMaterial({color:0xc0c0c0, roughness:0.2, metalness:0.7});
-
-  // Rails
-  const rGeo = new THREE.BoxGeometry(0.035, 0.018, 0.5);
-  [-0.15, 0.15].forEach(x => {
-    const r = new THREE.Mesh(rGeo, frame); r.position.set(x, 0.009, 0); r.castShadow = true;
-    seatGroup.add(r);
-  });
-
-  // Cushion
-  cushion = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.07, 0.46), white());
-  cushion.position.set(0, 0.085, 0); cushion.castShadow = true; cushion.receiveShadow = true;
-  seatGroup.add(cushion);
-
-  // Bolsters
-  const bGeo = new THREE.BoxGeometry(0.06, 0.11, 0.44);
-  lBolster = new THREE.Mesh(bGeo, white()); lBolster.position.set(-0.26, 0.12, 0); lBolster.castShadow = true;
-  rBolster = new THREE.Mesh(bGeo, white()); rBolster.position.set(0.26, 0.12, 0); rBolster.castShadow = true;
-  seatGroup.add(lBolster, rBolster);
-
-  // Backrest pivot
-  backPivot = new THREE.Group();
-  backPivot.position.set(0, 0.125, -0.18);
-  seatGroup.add(backPivot);
-
-  backrest = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.56, 0.07), white());
-  backrest.position.set(0, 0.28, -0.015); backrest.castShadow = true; backrest.receiveShadow = true;
-  backPivot.add(backrest);
-
-  // Back bolsters
-  const bbGeo = new THREE.BoxGeometry(0.06, 0.50, 0.06);
-  const lbb = new THREE.Mesh(bbGeo, white()); lbb.position.set(-0.24, 0.28, 0.01);
-  const rbb = new THREE.Mesh(bbGeo, white()); rbb.position.set(0.24, 0.28, 0.01);
-  backPivot.add(lbb, rbb);
-
-  // Headrest
-  headrest = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.15, 0.06), white());
-  headrest.position.set(0, 0.62, -0.01); headrest.castShadow = true;
-  backPivot.add(headrest);
-}
-
-function buildSliders() {
-  const container = document.getElementById('sliders');
-  SEAT_AXES.forEach(ax => {
-    const div = document.createElement('div');
-    div.className = 'ctrl';
-    div.innerHTML = `
-      <div class="ctrl-row">
-        <span class="ctrl-label">${ax.label}</span>
-        <span class="ctrl-val" id="v_${ax.id}">${S[ax.id]}${ax.unit}</span>
-      </div>
-      <input type="range" id="r_${ax.id}" min="${ax.min}" max="${ax.max}" value="${S[ax.id]}" step="1">
-    `;
-    container.appendChild(div);
-    div.querySelector('input').addEventListener('input', e => {
-      S[ax.id] = parseFloat(e.target.value);
-      document.getElementById('v_'+ax.id).textContent = S[ax.id] + ax.unit;
-      targetS = null;
-    });
-  });
-}
-
-function updateSliderUI() {
-  SEAT_AXES.forEach(ax => {
-    const r = document.getElementById('r_'+ax.id);
-    const v = document.getElementById('v_'+ax.id);
-    if(r) { r.value = S[ax.id]; v.textContent = Math.round(S[ax.id]) + ax.unit; }
-  });
-}
-
-function preset(name) {
-  const p = PRESETS[name]; if(!p) return;
-  targetS = {...p};
-  document.querySelectorAll('.pb').forEach(b => b.classList.toggle('on', b.textContent.toLowerCase() === name));
-}
-
-function switchView(view, btn) {
-  currentView = view;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('sel'));
-  btn.classList.add('sel');
-
-  if(view === 'car') {
-    if(carModel) carModel.visible = true;
-    seatGroup.visible = false;
-    document.getElementById('carPanel').style.display = '';
-    document.getElementById('seatPanel').style.display = 'none';
-    cam.position.set(2.5, 1.5, 3);
-    ctrl.target.set(0, 0.5, 0);
-  } else {
-    if(carModel) carModel.visible = false;
-    seatGroup.visible = true;
-    document.getElementById('carPanel').style.display = 'none';
-    document.getElementById('seatPanel').style.display = '';
-    cam.position.set(1.2, 0.85, 1.5);
-    ctrl.target.set(0, 0.32, 0);
+// Seat → white material
+mv.addEventListener('load', ()=>{
+  if(mv.src.includes('car-seat')) {
+    try {
+      const model = mv.model;
+      if(model) {
+        for(const mat of model.materials) {
+          mat.pbrMetallicRoughness.setBaseColorFactor([0.95,0.92,0.88,1]);
+          mat.pbrMetallicRoughness.setMetallicFactor(0);
+          mat.pbrMetallicRoughness.setRoughnessFactor(0.45);
+        }
+      }
+    } catch(e){}
   }
-}
+});
 
-// Allow Flutter to call
-window.loadModel = function(name) {
-  const btn = document.querySelector(`.tab:nth-child(${name==='car'?1:2})`);
-  if(btn) switchView(name, btn);
+// Flutter WebView bridge
+window.loadModel = function(id) {
+  const btn = document.querySelector(`.tab:nth-child(${id==='car'?1:2})`);
+  sw(id, btn);
 };
-
-function applySeat() {
-  // Animate toward target
-  if(targetS) {
-    let done = true;
-    SEAT_AXES.forEach(ax => {
-      const diff = targetS[ax.id] - S[ax.id];
-      if(Math.abs(diff) > 0.5) { S[ax.id] += diff * 0.08; done = false; }
-      else S[ax.id] = targetS[ax.id];
-    });
-    if(done) targetS = null;
-    updateSliderUI();
-  }
-
-  // Apply to 3D
-  seatGroup.position.z = S.slide * 0.001;
-  seatGroup.position.y = S.height * 0.001;
-  cushion.rotation.x = THREE.MathUtils.degToRad(S.tilt);
-
-  backPivot.rotation.x = -THREE.MathUtils.degToRad(S.recline);
-
-  headrest.position.y = 0.62 + S.hrH * 0.001;
-
-  const bScale = 1 + S.bolster * 0.005;
-  lBolster.scale.x = bScale; rBolster.scale.x = bScale;
-  lBolster.position.x = -0.26 - S.bolster * 0.0003;
-  rBolster.position.x = 0.26 + S.bolster * 0.0003;
-
-  // Lumbar bulge
-  backrest.scale.z = 1 + S.lumbar * 0.003;
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  ctrl.update();
-  applySeat();
-  rend.render(scene, cam);
-}
-
-init();
 </script>
 </body>
 </html>
