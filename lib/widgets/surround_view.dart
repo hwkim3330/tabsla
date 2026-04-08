@@ -52,8 +52,7 @@ camera.lookAt(0, 0, -5);
 const R = new THREE.WebGLRenderer({antialias:true});
 R.setSize(innerWidth, innerHeight);
 R.setPixelRatio(Math.min(devicePixelRatio, 2));
-R.shadowMap.enabled = true;
-R.shadowMap.type = THREE.PCFSoftShadowMap;
+R.shadowMap.enabled = false;
 R.toneMapping = THREE.ACESFilmicToneMapping;
 R.toneMappingExposure = 1.8;
 document.body.appendChild(R.domElement);
@@ -67,10 +66,7 @@ ctrl.minDistance = 4; ctrl.maxDistance = 16; ctrl.enablePan = false;
 // Lighting — brighter
 scene.add(new THREE.AmbientLight(0x5577aa, 1.2));
 const sun = new THREE.DirectionalLight(0x8899cc, 1.0);
-sun.position.set(-5, 15, 10); sun.castShadow = true;
-sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-25; sun.shadow.camera.right=25;
-sun.shadow.camera.top=25; sun.shadow.camera.bottom=-25;
+sun.position.set(-5, 15, 10);
 scene.add(sun);
 scene.add(new THREE.DirectionalLight(0x445566, 0.5).translateX(5).translateY(8).translateZ(-5));
 // Extra fill from below
@@ -87,13 +83,13 @@ for(const x of [-0.5, 0.5]){
 // Ground
 const gnd = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
   new THREE.MeshStandardMaterial({color:0x101e12, roughness:0.9}));
-gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; gnd.receiveShadow=true; scene.add(gnd);
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; scene.add(gnd);
 
 // Road
 const RW=8, RL=200;
 const rd = new THREE.Mesh(new THREE.PlaneGeometry(RW, RL),
   new THREE.MeshStandardMaterial({color:0x333a46, roughness:0.8}));
-rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); rd.receiveShadow=true; scene.add(rd);
+rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); scene.add(rd);
 
 // Edges
 for(const x of [-RW/2, RW/2]){
@@ -116,31 +112,7 @@ const bp = new THREE.Mesh(new THREE.PlaneGeometry(1.5, RL),
   new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.06}));
 bp.rotation.x=-Math.PI/2; bp.position.set(0, 0.007, -RL/2+10); scene.add(bp);
 
-// Buildings
-const bMat = new THREE.MeshStandardMaterial({color:0x1c2535, roughness:0.85});
-const wMat = new THREE.MeshBasicMaterial({color:0x446688, transparent:true, opacity:0.35});
-let seed=42; const rn=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};
-for(let sd=-1;sd<=1;sd+=2) for(let i=0;i<25;i++){
-  const h=3+rn()*12, w=2+rn()*4, d=2+rn()*3;
-  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), bMat);
-  const x=sd*(RW/2+3+rn()*8), z=-i*8+rn()*3;
-  b.position.set(x, h/2, z); b.castShadow=true; scene.add(b);
-  // Windows
-  if(h>5) for(let wy=1.5;wy<h-1;wy+=1.8) for(let wx=-w/3;wx<=w/3;wx+=1.2)
-    if(rn()>0.4){
-      const wn=new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.6), wMat);
-      wn.position.set(x+(sd>0?-w/2-0.01:w/2+0.01), wy, z+wx);
-      wn.rotation.y=sd>0?Math.PI/2:-Math.PI/2; scene.add(wn);
-    }
-  // Trees
-  if(rn()>0.5){
-    const th=1.5+rn()*2;
-    scene.add(new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,th),
-      new THREE.MeshStandardMaterial({color:0x3a2a1a})).translateX(sd*(RW/2+1.5)).translateY(th/2).translateZ(z+2));
-    scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.7+rn()*0.5,6,6),
-      new THREE.MeshStandardMaterial({color:0x1a3a1a})).translateX(sd*(RW/2+1.5)).translateY(th+0.3).translateZ(z+2));
-  }
-}
+// No buildings — performance optimization
 
 // Ego car
 let ego = null;

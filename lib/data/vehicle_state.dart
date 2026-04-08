@@ -155,17 +155,44 @@ class VehicleState extends ChangeNotifier {
     _range = _batteryLevel * 4;
 
     final route = _activeRoute;
-    _segmentProgress += _speed * 0.000015;
-    if (_segmentProgress >= 1.0) {
-      _segmentProgress -= 1.0;
-      _waypointIndex = (_waypointIndex + 1) % (route.length - 1);
-      if (_navRoute == null && _waypointIndex < routeStreetNames.length) {
-        _currentStreet = routeStreetNames[_waypointIndex];
+    if (_waypointIndex >= route.length - 1) {
+      // Route finished — loop or stop
+      if (_navRoute != null) {
+        _waypointIndex = 0; _segmentProgress = 0;
+        _currentStreet = 'Route completed';
+      } else {
+        _waypointIndex = 0; _segmentProgress = 0;
       }
     }
 
     final from = route[_waypointIndex];
-    final to = route[(_waypointIndex + 1) % route.length];
+    final toIdx = (_waypointIndex + 1).clamp(0, route.length - 1);
+    final to = route[toIdx];
+
+    // Calculate segment length and advance proportionally
+    final segDist = _distBetween(from, to); // meters
+    final speedMs = _speed / 3.6; // km/h to m/s
+    final dt = 0.05; // timer interval in seconds
+    final advance = segDist > 0.1 ? (speedMs * dt) / segDist : 0.01;
+    _segmentProgress += advance;
+
+    if (_segmentProgress >= 1.0) {
+      _segmentProgress -= 1.0;
+      _waypointIndex++;
+      if (_waypointIndex >= route.length - 1) {
+        if (_navRoute != null) {
+          _currentStreet = 'Arrived';
+          _isParked = true; _gear = 'P'; _speed = 0;
+          return;
+        }
+        _waypointIndex = 0;
+      }
+      if (_navRoute == null && _waypointIndex < routeStreetNames.length) {
+        _currentStreet = routeStreetNames[_waypointIndex];
+      } else if (_navRoute != null) {
+        _currentStreet = 'Following route';
+      }
+    }
     _position = LatLng(
       from.latitude + (to.latitude - from.latitude) * _segmentProgress,
       from.longitude + (to.longitude - from.longitude) * _segmentProgress,
@@ -256,6 +283,11 @@ class VehicleState extends ChangeNotifier {
     _gear = _isParked ? 'P' : 'D';
     if (!_isParked && !_simMode) { _tripDistance = 0; _trail.clear(); }
     notifyListeners();
+  }
+
+  double _distBetween(LatLng a, LatLng b) {
+    const d = Distance();
+    return d.as(LengthUnit.Meter, a, b);
   }
 
   void toggleAc() { _acOn = !_acOn; notifyListeners(); }
