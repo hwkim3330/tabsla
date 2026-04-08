@@ -103,13 +103,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     children: [
       _camMode ? _camera() : _surround(),
 
-      // 3D Low-poly car model overlay at bottom center
+      // 3D Low-poly car model — positioned on the road, lower-center
       if (!_camMode)
         Positioned(
-          bottom: 20, left: 0, right: 0,
+          bottom: 40, left: 0, right: 0,
           child: Center(
             child: SizedBox(
-              width: 120, height: 100,
+              width: 140, height: 130,
               child: IgnorePointer(
                 child: _EgoCarModel(steer: _v.steeringAngle),
               ),
@@ -117,11 +117,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
 
-      // Sensor HUD
-      Positioned(right: 6, top: 36, bottom: 100, child: _sensorHud()),
+      // Sensor HUD — right side, below top info
+      Positioned(right: 6, top: 50, bottom: 60, child: _sensorHud()),
 
-      // Camera toggle
-      Positioned(top: 8, left: 8,
+      // Camera toggle — top right area (speed/gear is now top-left)
+      Positioned(top: 80, left: 16,
         child: GestureDetector(
           onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); },
           child: Container(
@@ -236,18 +236,20 @@ model-viewer{width:100vw;height:100vh;--poster-color:transparent}</style>
 <model-viewer id="mv"
   src="https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb"
   alt="ego"
-  camera-orbit="0deg 45deg 2m"
-  field-of-view="25deg"
-  exposure="1.5"
-  shadow-intensity="0"
+  camera-orbit="180deg 55deg 2.2m"
+  field-of-view="22deg"
+  exposure="1.3"
+  shadow-intensity="0.3"
+  shadow-softness="1"
   environment-image="neutral"
+  tone-mapping="commerce"
   disable-zoom
   interaction-prompt="none"
   style="background:transparent"
 ></model-viewer>
 <script>
 function setAngle(deg){
-  document.getElementById('mv').cameraOrbit=deg+'deg 45deg 2m';
+  document.getElementById('mv').cameraOrbit=(180+deg)+'deg 55deg 2.2m';
 }
 </script>
 </body></html>''');
