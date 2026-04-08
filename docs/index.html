@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Vehicle Model Viewer</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111318; overflow: hidden; font-family: -apple-system, sans-serif; }
+model-viewer { width: 100vw; height: 100vh; --poster-color: #111318; }
+.tabs { position: fixed; top: 8px; left: 8px; z-index: 10; display: flex; gap: 4px; }
+.tab { padding: 6px 14px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600;
+  cursor: pointer; color: #666; background: rgba(255,255,255,0.05); transition: all 0.2s; }
+.tab.active { color: #ddd; background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+<div class="tabs">
+  <button class="tab active" onclick="load('exterior')">Exterior</button>
+  <button class="tab" onclick="load('seat')">Seat</button>
+  <button class="tab" onclick="load('lowpoly')">Low-Poly</button>
+</div>
+
+<model-viewer id="viewer"
+  src="models/ferrari.glb"
+  alt="3D Car Model"
+  auto-rotate
+  auto-rotate-delay="0"
+  rotation-per-second="10deg"
+  camera-controls
+  touch-action="pan-y"
+  shadow-intensity="0.3"
+  exposure="1"
+  camera-orbit="30deg 70deg 3m"
+  field-of-view="30deg"
+  style="background-color: #111318;"
+></model-viewer>
+
+<script>
+const models = {
+  exterior: { src: 'models/ferrari.glb', orbit: '30deg 70deg 3m', fov: '30deg', exposure: '1' },
+  seat: { src: 'models/car-seat.glb', orbit: '0deg 75deg 1.5m', fov: '35deg', exposure: '1.2' },
+  lowpoly: { src: 'models/car.glb', orbit: '30deg 70deg 2m', fov: '30deg', exposure: '1' },
+};
+
+function load(name) {
+  const v = document.getElementById('viewer');
+  const m = models[name];
+  v.src = m.src;
+  v.cameraOrbit = m.orbit;
+  v.fieldOfView = m.fov;
+  v.exposure = m.exposure;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// Allow Flutter to call via JS
+window.loadModel = load;
+</script>
+</body>
+</html>
