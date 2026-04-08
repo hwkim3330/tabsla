@@ -149,26 +149,51 @@ class _RoadPainter extends CustomPainter {
 
     _drawRoad(canvas, size, cx, h, b, vx);
     _drawLanes(canvas, size, cx, h, b, vx);
+    _drawAutopilotPath(canvas, size, cx, h, b, vx);
 
     // Detected objects
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
     for (final o in sorted) _drawVehicle(canvas, size, o, cx, h, b, vx);
 
-    // Ego car shadow/ground indicator
-    _drawEgoGround(canvas, size, cx);
+    // Ego car ground shadow
+    _drawEgoGround(canvas, size, cx, b);
   }
 
   void _drawRoad(Canvas c, Size s, double cx, double h, double b, double vx) {
     final wt = 60.0, wb = s.width * 0.85;
+
+    // Shoulder/grass areas
+    final shoulderW = 15.0;
+    final grassL = Path()
+      ..moveTo(0, h)..lineTo(vx - wt / 2 - shoulderW, h)
+      ..lineTo(cx - wb / 2 - shoulderW * 3, b)..lineTo(0, b)..close();
+    final grassR = Path()
+      ..moveTo(s.width, h)..lineTo(vx + wt / 2 + shoulderW, h)
+      ..lineTo(cx + wb / 2 + shoulderW * 3, b)..lineTo(s.width, b)..close();
+    c.drawPath(grassL, Paint()..color = const Color(0xFF152018));
+    c.drawPath(grassR, Paint()..color = const Color(0xFF152018));
+
+    // Shoulder strips
+    final shoulderL = Path()
+      ..moveTo(vx - wt / 2 - shoulderW, h)..lineTo(vx - wt / 2, h)
+      ..lineTo(cx - wb / 2, b)..lineTo(cx - wb / 2 - shoulderW * 3, b)..close();
+    final shoulderR = Path()
+      ..moveTo(vx + wt / 2, h)..lineTo(vx + wt / 2 + shoulderW, h)
+      ..lineTo(cx + wb / 2 + shoulderW * 3, b)..lineTo(cx + wb / 2, b)..close();
+    c.drawPath(shoulderL, Paint()..color = const Color(0xFF1E2630));
+    c.drawPath(shoulderR, Paint()..color = const Color(0xFF1E2630));
+
+    // Road surface
     final road = Path()
       ..moveTo(vx - wt / 2, h)..lineTo(vx + wt / 2, h)
       ..lineTo(cx + wb / 2, b)..lineTo(cx - wb / 2, b)..close();
-    c.drawPath(road, Paint()..shader = const LinearGradient(
+    c.drawPath(road, Paint()..shader = LinearGradient(
       begin: Alignment.topCenter, end: Alignment.bottomCenter,
-      colors: [Color(0xFF222A36), Color(0xFF2A3342)],
+      colors: [const Color(0xFF252D38), const Color(0xFF2D3644), const Color(0xFF323C4A)],
     ).createShader(Rect.fromLTWH(0, h, s.width, b - h)));
 
-    final edge = Paint()..color = Colors.white.withValues(alpha: 0.18)..strokeWidth = 1.5;
+    // Edge lines (solid white)
+    final edge = Paint()..color = Colors.white.withValues(alpha: 0.3)..strokeWidth = 2;
     c.drawLine(Offset(vx - wt / 2, h), Offset(cx - wb / 2, b), edge);
     c.drawLine(Offset(vx + wt / 2, h), Offset(cx + wb / 2, b), edge);
   }
@@ -194,19 +219,37 @@ class _RoadPainter extends CustomPainter {
     }
   }
 
-  void _drawEgoGround(Canvas c, Size s, double cx) {
-    // Shadow/glow on road where the 3D model overlays
+  // Autopilot blue path line (Tesla style)
+  void _drawAutopilotPath(Canvas c, Size s, double cx, double h, double b, double vx) {
+    if (speed < 1) return;
+    final path = Path();
+    for (int i = 0; i <= 30; i++) {
+      final t = i / 30.0;
+      final p = pow(t, 1.6).toDouble();
+      final rw = lerpDouble(60, s.width * 0.85, p)!;
+      final bx = lerpDouble(vx, cx, p)!;
+      final y = lerpDouble(h, b, p)!;
+      if (i == 0) path.moveTo(bx, y); else path.lineTo(bx, y);
+    }
+    // Blue glow
+    c.drawPath(path, Paint()
+      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke..strokeWidth = 20
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
+    // Blue line
+    c.drawPath(path, Paint()
+      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke..strokeWidth = 3..strokeCap = StrokeCap.round);
+  }
+
+  void _drawEgoGround(Canvas c, Size s, double cx, double roadBottom) {
+    // Shadow exactly where 3D model sits
     final y = s.height * 0.72;
-    c.drawOval(Rect.fromCenter(center: Offset(cx, y), width: 70, height: 12),
-      Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.06)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-    // Headlight beams going forward (upward on screen)
-    final beam = Path()
-      ..moveTo(cx - 18, y - 15)
-      ..lineTo(cx - 40, s.height * 0.2)
-      ..lineTo(cx + 40, s.height * 0.2)
-      ..lineTo(cx + 18, y - 15)
-      ..close();
-    c.drawPath(beam, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.02));
+    c.drawOval(Rect.fromCenter(center: Offset(cx, y), width: 80, height: 14),
+      Paint()..color = Colors.black.withValues(alpha: 0.15)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    // Subtle blue reflection
+    c.drawOval(Rect.fromCenter(center: Offset(cx, y + 2), width: 50, height: 6),
+      Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.04));
   }
 
   void _drawVehicle(Canvas c, Size s, DetectedObject o, double cx, double h, double b, double vx) {

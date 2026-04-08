@@ -103,24 +103,36 @@ class _DashboardScreenState extends State<DashboardScreen>
     children: [
       _camMode ? _camera() : _surround(),
 
-      // 3D Low-poly car model — positioned on the road, lower-center
+      // 3D car on the road — aligned to road center, 55% down
       if (!_camMode)
         Positioned(
-          bottom: 40, left: 0, right: 0,
-          child: Center(
+          top: 0, bottom: 0, left: 0, right: 0,
+          child: Align(
+            alignment: const Alignment(0.0, 0.45),
             child: SizedBox(
-              width: 140, height: 130,
-              child: IgnorePointer(
-                child: _EgoCarModel(steer: _v.steeringAngle),
-              ),
+              width: 160, height: 150,
+              child: IgnorePointer(child: _EgoCarModel(steer: _v.steeringAngle)),
             ),
           ),
         ),
 
-      // Sensor HUD — right side, below top info
+      // Gear swipe overlay (Tesla Highland: swipe up=D, down=R, tap center=P)
+      if (!_camMode)
+        Positioned.fill(
+          child: _GearGesture(
+            gear: _v.gear,
+            onGearChange: (g) {
+              Haptics.medium();
+              if (g == 'D' && _v.isParked) _v.toggleDrive();
+              else if (g == 'P' && !_v.isParked) _v.toggleDrive();
+            },
+          ),
+        ),
+
+      // Sensor HUD
       Positioned(right: 6, top: 50, bottom: 60, child: _sensorHud()),
 
-      // Camera toggle — top right area (speed/gear is now top-left)
+      // Camera toggle
       Positioned(top: 80, left: 16,
         child: GestureDetector(
           onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); },
@@ -132,14 +144,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
 
-      // Sim speed control
+      // Sim speed
       if (_v.simMode && !_camMode)
         Positioned(
           bottom: 8, left: 12, right: 80,
-          child: _SimSpeedControl(
-            speed: _v.simTargetSpeed,
-            onChanged: _v.setSimSpeed,
-          ),
+          child: _SimSpeedControl(speed: _v.simTargetSpeed, onChanged: _v.setSimSpeed),
         ),
     ],
   );
@@ -191,6 +200,27 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+// Tesla Highland gear gesture — swipe up=D, swipe down=R, double tap=P
+class _GearGesture extends StatelessWidget {
+  final String gear;
+  final ValueChanged<String> onGearChange;
+  const _GearGesture({required this.gear, required this.onGearChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v < -200) onGearChange('D');      // swipe up = Drive
+        else if (v > 200) onGearChange('P');  // swipe down = Park
+      },
+      onDoubleTap: () => onGearChange('P'),
+      child: const SizedBox.expand(),
     );
   }
 }
