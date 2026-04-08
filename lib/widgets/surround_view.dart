@@ -123,8 +123,8 @@ class _DrivePainter extends CustomPainter {
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
     for (final o in sorted) _drawVehicle(canvas, size, o, cx, horizon, roadEnd, vx);
 
-    // Ego car — on the same canvas, moves with road
-    _drawEgoCar(canvas, size, cx, roadEnd);
+    // Ego car ground effects only (3D model overlays the actual car)
+    _drawEgoGround(canvas, size, cx, roadEnd);
   }
 
   void _drawSky(Canvas c, Size s, double h) {
@@ -231,108 +231,20 @@ class _DrivePainter extends CustomPainter {
       ..style = PaintingStyle.stroke..strokeWidth = 3..strokeCap = StrokeCap.round);
   }
 
-  // === EGO CAR — detailed Tesla-like top-down with perspective ===
-  void _drawEgoCar(Canvas c, Size s, double cx, double roadEnd) {
-    final x = cx;
-    final y = roadEnd + s.height * 0.15; // just below road end
-    final w = 52.0, h = 100.0;
-
-    // Ground shadow
-    c.drawOval(Rect.fromCenter(center: Offset(x, y + 5), width: w + 16, height: 14),
-      Paint()..color = Colors.black.withValues(alpha: 0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
-
-    // Body shape — smooth sedan
-    final body = Path()
-      ..moveTo(x - w * 0.40, y + h * 0.08)
-      ..cubicTo(x - w * 0.44, y - h * 0.05, x - w * 0.46, y - h * 0.2, x - w * 0.42, y - h * 0.35)
-      ..cubicTo(x - w * 0.38, y - h * 0.5, x - w * 0.28, y - h * 0.65, x - w * 0.15, y - h * 0.78)
-      ..cubicTo(x - w * 0.06, y - h * 0.88, x + w * 0.06, y - h * 0.88, x + w * 0.15, y - h * 0.78)
-      ..cubicTo(x + w * 0.28, y - h * 0.65, x + w * 0.38, y - h * 0.5, x + w * 0.42, y - h * 0.35)
-      ..cubicTo(x + w * 0.46, y - h * 0.2, x + w * 0.44, y - h * 0.05, x + w * 0.40, y + h * 0.08)
-      ..close();
-
-    // Body gradient (3D depth effect)
-    c.drawPath(body, Paint()..shader = LinearGradient(
-      begin: Alignment.centerLeft, end: Alignment.centerRight,
-      colors: [const Color(0xFF1A2435), const Color(0xFF253248), const Color(0xFF2A3850), const Color(0xFF253248), const Color(0xFF1A2435)],
-    ).createShader(Rect.fromCenter(center: Offset(x, y - h * 0.4), width: w, height: h)));
-
-    // Top highlight (roof reflection)
-    final roofHL = Path()
-      ..moveTo(x - w * 0.2, y - h * 0.3)
-      ..cubicTo(x - w * 0.15, y - h * 0.5, x + w * 0.15, y - h * 0.5, x + w * 0.2, y - h * 0.3)
-      ..cubicTo(x + w * 0.15, y - h * 0.4, x - w * 0.15, y - h * 0.4, x - w * 0.2, y - h * 0.3)
-      ..close();
-    c.drawPath(roofHL, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.04));
-
-    // Outline glow
-    c.drawPath(body, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke..strokeWidth = 4
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
-
-    // Clean outline
-    c.drawPath(body, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke..strokeWidth = 1.2);
-
-    // Windshield (front)
-    final ws = Path()
-      ..moveTo(x - w * 0.25, y - h * 0.48)
-      ..quadraticBezierTo(x, y - h * 0.58, x + w * 0.25, y - h * 0.48)
-      ..lineTo(x + w * 0.22, y - h * 0.38)
-      ..quadraticBezierTo(x, y - h * 0.40, x - w * 0.22, y - h * 0.38)
-      ..close();
-    c.drawPath(ws, Paint()..color = const Color(0xFF4080C0).withValues(alpha: 0.12));
-    c.drawPath(ws, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 0.5);
-
-    // Rear window
-    final rw = Path()
-      ..moveTo(x - w * 0.24, y - h * 0.05)
-      ..quadraticBezierTo(x, y - h * 0.12, x + w * 0.24, y - h * 0.05)
-      ..lineTo(x + w * 0.22, y + h * 0.02)
-      ..quadraticBezierTo(x, y + h * 0.0, x - w * 0.22, y + h * 0.02)
-      ..close();
-    c.drawPath(rw, Paint()..color = const Color(0xFF4080C0).withValues(alpha: 0.08));
-
-    // Center roof panel (Tesla glass roof)
-    final roof = Path()
-      ..moveTo(x - w * 0.22, y - h * 0.38)
-      ..lineTo(x - w * 0.24, y - h * 0.05)
-      ..quadraticBezierTo(x, y - h * 0.08, x + w * 0.24, y - h * 0.05)
-      ..lineTo(x + w * 0.22, y - h * 0.38)
-      ..quadraticBezierTo(x, y - h * 0.40, x - w * 0.22, y - h * 0.38)
-      ..close();
-    c.drawPath(roof, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.03));
-
-    // Wheels
-    final wheelP = Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.2);
-    for (final pos in [
-      Offset(x - w * 0.48, y - h * 0.08), Offset(x + w * 0.48, y - h * 0.08),
-      Offset(x - w * 0.45, y - h * 0.55), Offset(x + w * 0.45, y - h * 0.55),
-    ]) {
-      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: pos, width: 7, height: 15), const Radius.circular(3)), wheelP);
-      // Wheel rim highlight
-      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: pos, width: 7, height: 15), const Radius.circular(3)),
-        Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.1)..style = PaintingStyle.stroke..strokeWidth = 0.5);
-    }
-
-    // Headlights (front, facing up)
-    final hlPaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.4);
-    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x - w * 0.28, y - h * 0.82), width: 8, height: 3), const Radius.circular(1.5)), hlPaint);
-    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x + w * 0.28, y - h * 0.82), width: 8, height: 3), const Radius.circular(1.5)), hlPaint);
-
-    // Tail lights
-    final tlPaint = Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.5);
-    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x - w * 0.32, y + h * 0.06), width: 10, height: 2.5), const Radius.circular(1)), tlPaint);
-    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x + w * 0.32, y + h * 0.06), width: 10, height: 2.5), const Radius.circular(1)), tlPaint);
-
-    // Headlight beam (forward = up on screen)
+  // Ground effects under where 3D model sits
+  void _drawEgoGround(Canvas c, Size s, double cx, double roadEnd) {
+    final y = roadEnd + s.height * 0.15;
+    // Shadow
+    c.drawOval(Rect.fromCenter(center: Offset(cx, y + 10), width: 80, height: 14),
+      Paint()..color = Colors.black.withValues(alpha: 0.15)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    // Headlight beams forward
     final beam = Path()
-      ..moveTo(x - w * 0.2, y - h * 0.88)
-      ..lineTo(x - w * 0.45, y - h * 0.88 - 60)
-      ..lineTo(x + w * 0.45, y - h * 0.88 - 60)
-      ..lineTo(x + w * 0.2, y - h * 0.88)
+      ..moveTo(cx - 18, y - 40)
+      ..lineTo(cx - 45, s.height * 0.18)
+      ..lineTo(cx + 45, s.height * 0.18)
+      ..lineTo(cx + 18, y - 40)
       ..close();
-    c.drawPath(beam, Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.015));
+    c.drawPath(beam, Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.012));
   }
 
   void _drawVehicle(Canvas c, Size s, DetectedObject o, double cx, double h, double b, double vx) {
