@@ -67,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     position: _v.position, heading: _v.heading, isMoving: !_v.isParked,
     speed: _v.speed, currentStreet: _v.currentStreet,
     tripDistance: _v.tripDistance, trail: _v.trail,
+    onRouteSet: (route) => _v.setNavRoute(route),
   );
 
   Widget _sensorHud() => SensorHud(
@@ -103,20 +104,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     children: [
       _camMode ? _camera() : _surround(),
 
-      // 3D car on the road — aligned to road center, 55% down
+      // 3D ego car on the road — touch enabled for rotate
       if (!_camMode)
         Positioned(
           top: 0, bottom: 0, left: 0, right: 0,
           child: Align(
-            alignment: const Alignment(0.0, 0.45),
+            alignment: const Alignment(0.0, 0.35),
             child: SizedBox(
-              width: 160, height: 150,
-              child: IgnorePointer(child: _EgoCarModel(steer: _v.steeringAngle)),
+              width: 180, height: 160,
+              child: _EgoCarModel(steer: _v.steeringAngle),
             ),
           ),
         ),
 
-      // Gear swipe overlay (Tesla Highland: swipe up=D, down=R, tap center=P)
+      // Gear swipe (only on edges, not blocking model)
       if (!_camMode)
         Positioned.fill(
           child: _GearGesture(

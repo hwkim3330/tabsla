@@ -66,10 +66,33 @@ class VehicleState extends ChangeNotifier {
     await _initGps();
   }
 
+  // Navigation route for sim to follow
+  List<LatLng>? _navRoute;
+  List<LatLng>? get navRoute => _navRoute;
+
+  void setNavRoute(List<LatLng> route) {
+    _navRoute = route;
+    if (_simMode) {
+      // Reset to follow new route
+      _waypointIndex = 0;
+      _segmentProgress = 0;
+      _position = route.first;
+      _trail.clear();
+    }
+    notifyListeners();
+  }
+
+  void clearNavRoute() {
+    _navRoute = null;
+    notifyListeners();
+  }
+
+  List<LatLng> get _activeRoute => _navRoute ?? seoulRoute;
+
   void enableSimulation() {
     _simMode = true;
     _positionStream?.cancel();
-    _position = seoulRoute.first;
+    _position = _activeRoute.first;
     _waypointIndex = 0;
     _segmentProgress = 0;
     _isParked = false;
@@ -77,7 +100,7 @@ class VehicleState extends ChangeNotifier {
     _speed = 50;
     _trail.clear();
     _tripDistance = 0;
-    _currentStreet = 'Sejong-daero';
+    _currentStreet = _navRoute != null ? 'Following route' : 'Sejong-daero';
     _startSimTimer();
     notifyListeners();
   }
@@ -120,23 +143,26 @@ class VehicleState extends ChangeNotifier {
     _batteryLevel = _batteryLevel.clamp(0, 100);
     _range = _batteryLevel * 4;
 
+    final route = _activeRoute;
     _segmentProgress += _speed * 0.000015;
     if (_segmentProgress >= 1.0) {
       _segmentProgress -= 1.0;
-      _waypointIndex = (_waypointIndex + 1) % (seoulRoute.length - 1);
-      if (_waypointIndex < routeStreetNames.length) _currentStreet = routeStreetNames[_waypointIndex];
+      _waypointIndex = (_waypointIndex + 1) % (route.length - 1);
+      if (_navRoute == null && _waypointIndex < routeStreetNames.length) {
+        _currentStreet = routeStreetNames[_waypointIndex];
+      }
     }
 
-    final from = seoulRoute[_waypointIndex];
-    final to = seoulRoute[(_waypointIndex + 1) % seoulRoute.length];
+    final from = route[_waypointIndex];
+    final to = route[(_waypointIndex + 1) % route.length];
     _position = LatLng(
       from.latitude + (to.latitude - from.latitude) * _segmentProgress,
       from.longitude + (to.longitude - from.longitude) * _segmentProgress,
     );
     _heading = atan2(to.longitude - from.longitude, to.latitude - from.latitude) * 180 / pi;
 
-    if (_waypointIndex + 2 < seoulRoute.length) {
-      final next = seoulRoute[_waypointIndex + 2];
+    if (_waypointIndex + 2 < route.length) {
+      final next = route[_waypointIndex + 2];
       final fh = atan2(next.longitude - to.longitude, next.latitude - to.latitude) * 180 / pi;
       var diff = fh - _heading;
       if (diff > 180) diff -= 360;

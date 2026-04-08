@@ -148,6 +148,7 @@ class _RoadPainter extends CustomPainter {
     final vx = cx + steer * 2;
 
     _drawRoad(canvas, size, cx, h, b, vx);
+    _drawBuildings(canvas, size, cx, h, b, vx);
     _drawLanes(canvas, size, cx, h, b, vx);
     _drawAutopilotPath(canvas, size, cx, h, b, vx);
 
@@ -215,6 +216,58 @@ class _RoadPainter extends CustomPainter {
         c.drawLine(Offset(x1, y1), Offset(x2, y2), Paint()
           ..color = Colors.white.withValues(alpha: (p1 * 0.35).clamp(0.02, 0.22))
           ..strokeWidth = 1 + p1 * 2..strokeCap = StrokeCap.round);
+      }
+    }
+  }
+
+  // Buildings + trees along the road
+  void _drawBuildings(Canvas c, Size s, double cx, double h, double b, double vx) {
+    final rng = Random(42); // fixed seed for consistent buildings
+    final flow = (anim * 0.3) % 1.0;
+
+    for (int side = -1; side <= 1; side += 2) { // -1=left, 1=right
+      for (int i = 0; i < 8; i++) {
+        final t = (i + flow * 0.5) / 8.0;
+        if (t > 1) continue;
+        final p = pow(t, 1.6).toDouble();
+        final rw = lerpDouble(60, s.width * 0.85, p)!;
+        final bx = lerpDouble(vx, cx, p)!;
+        final y = lerpDouble(h, b, p)!;
+        final edgeX = bx + side * (rw / 2 + 15 + rng.nextDouble() * 20);
+
+        final bldgH = (15 + rng.nextDouble() * 35) * (1 - p * 0.3);
+        final bldgW = 8 + rng.nextDouble() * 15;
+        final alpha = (0.12 - p * 0.06).clamp(0.02, 0.12);
+
+        // Building
+        c.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(edgeX - bldgW / 2, y - bldgH, bldgW, bldgH),
+            const Radius.circular(1)),
+          Paint()..color = Color.fromRGBO(30, 40, 55, alpha));
+
+        // Windows (tiny dots)
+        if (bldgH > 20) {
+          for (double wy = y - bldgH + 4; wy < y - 4; wy += 6) {
+            for (double wx = edgeX - bldgW / 3; wx < edgeX + bldgW / 3; wx += 5) {
+              if (rng.nextDouble() > 0.5) {
+                c.drawRect(Rect.fromLTWH(wx, wy, 2, 2),
+                  Paint()..color = Color.fromRGBO(100, 140, 200, alpha * 0.5));
+              }
+            }
+          }
+        }
+
+        // Trees between buildings
+        if (rng.nextDouble() > 0.4) {
+          final treeX = edgeX + side * (bldgW / 2 + 5);
+          final treeH = 8 + rng.nextDouble() * 12;
+          c.drawCircle(Offset(treeX, y - treeH),
+            3 + p * 3,
+            Paint()..color = Color.fromRGBO(25, 50, 30, alpha * 1.5));
+          c.drawLine(Offset(treeX, y), Offset(treeX, y - treeH + 2),
+            Paint()..color = Color.fromRGBO(40, 30, 20, alpha)..strokeWidth = 1);
+        }
       }
     }
   }
