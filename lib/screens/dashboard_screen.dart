@@ -48,13 +48,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _close() { Haptics.tap(); setState(() => _app = null); }
 
-  Widget _surround() => AnimatedBuilder(
-    animation: _anim,
-    builder: (_, __) => SurroundView(
-      speed: _v.speed, gear: _v.gear, steeringAngle: _v.steeringAngle,
-      objects: _v.detectedObjects, animationValue: _anim.value,
-      batteryLevel: _v.batteryLevel, range: _v.range,
-    ),
+  Widget _surround() => SurroundView(
+    speed: _v.speed, gear: _v.gear, steeringAngle: _v.steeringAngle,
+    objects: _v.detectedObjects, animationValue: 0,
+    batteryLevel: _v.batteryLevel, range: _v.range,
   );
 
   Widget _camera() => CameraSurroundView(
@@ -103,25 +100,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _leftDefault() => Stack(
     children: [
       _camMode ? _camera() : _surround(),
-
-      // 3D low-poly model overlay (model-viewer works on this tab)
-      if (!_camMode)
-        Positioned(
-          left: 0, right: 0, top: 0, bottom: 0,
-          child: LayoutBuilder(builder: (ctx, box) {
-            final carTop = box.maxHeight * 0.52;
-            final carW = 170.0;
-            final carH = 155.0;
-            return Stack(children: [
-              Positioned(
-                left: box.maxWidth / 2 - carW / 2,
-                top: carTop,
-                width: carW, height: carH,
-                child: _EgoModel(steer: _v.steeringAngle),
-              ),
-            ]);
-          }),
-        ),
 
       // Sensor HUD
       Positioned(right: 6, top: 50, bottom: 60, child: _sensorHud()),
@@ -194,77 +172,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-    );
-  }
-}
-
-class _EgoModel extends StatefulWidget {
-  final double steer;
-  const _EgoModel({required this.steer});
-  @override
-  State<_EgoModel> createState() => _EgoModelState();
-}
-
-class _EgoModelState extends State<_EgoModel> {
-  late final WebViewController _wv;
-  bool _loaded = false;
-
-  // Matches road extension color in surround_view.dart
-  static const _bg = Color(0xFF343E4E);
-
-  @override
-  void initState() {
-    super.initState();
-    _wv = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(_bg)
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) { if (mounted) setState(() => _loaded = true); },
-      ))
-      ..loadHtmlString('''
-<!DOCTYPE html><html><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-<style>*{margin:0;padding:0}body{background:#343E4E;overflow:hidden}
-model-viewer{width:100vw;height:100vh;--poster-color:#343E4E}</style>
-</head><body>
-<model-viewer id="mv"
-  src="https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb"
-  alt="car"
-  camera-controls
-  camera-orbit="180deg 55deg 2m"
-  min-camera-orbit="auto 20deg 1m"
-  max-camera-orbit="auto 85deg 4m"
-  field-of-view="25deg"
-  exposure="1.3"
-  shadow-intensity="0.5"
-  shadow-softness="1"
-  environment-image="neutral"
-  tone-mapping="commerce"
-  interaction-prompt="none"
-  style="background:#343E4E"
-></model-viewer>
-<script>
-function setAngle(d){document.getElementById('mv').cameraOrbit=(180+d)+'deg 55deg 2m'}
-</script>
-</body></html>''');
-  }
-
-  @override
-  void didUpdateWidget(_EgoModel old) {
-    super.didUpdateWidget(old);
-    if (old.steer != widget.steer && _loaded) {
-      final a = (widget.steer * -2).clamp(-25, 25).toInt();
-      _wv.runJavaScript('setAngle($a)');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: WebViewWidget(controller: _wv),
     );
   }
 }
