@@ -103,10 +103,18 @@ class VehicleState extends ChangeNotifier {
     });
   }
 
+  double _simTargetSpeed = 60;
+  double get simTargetSpeed => _simTargetSpeed;
+
+  void setSimSpeed(double s) {
+    _simTargetSpeed = s.clamp(10, 200);
+    notifyListeners();
+  }
+
   void _simDrive() {
-    final target = 55 + sin(_segmentProgress * pi * 2) * 15;
+    final target = _simTargetSpeed + sin(_segmentProgress * pi * 2) * 10;
     _speed += (target - _speed) * 0.02 + (_rng.nextDouble() - 0.5) * 0.5;
-    _speed = _speed.clamp(25, 90);
+    _speed = _speed.clamp(5, 200);
     _power = _speed * 0.5 + (_rng.nextDouble() - 0.3) * 10;
     _batteryLevel -= 0.0002;
     _batteryLevel = _batteryLevel.clamp(0, 100);

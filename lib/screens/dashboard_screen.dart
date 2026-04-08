@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../data/vehicle_state.dart';
 import '../data/sensor_manager.dart';
 import '../data/haptics.dart';
@@ -101,7 +102,25 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _leftDefault() => Stack(
     children: [
       _camMode ? _camera() : _surround(),
+
+      // 3D Low-poly car model overlay at bottom center
+      if (!_camMode)
+        Positioned(
+          bottom: 20, left: 0, right: 0,
+          child: Center(
+            child: SizedBox(
+              width: 120, height: 100,
+              child: IgnorePointer(
+                child: _EgoCarModel(steer: _v.steeringAngle),
+              ),
+            ),
+          ),
+        ),
+
+      // Sensor HUD
       Positioned(right: 6, top: 36, bottom: 100, child: _sensorHud()),
+
+      // Camera toggle
       Positioned(top: 8, left: 8,
         child: GestureDetector(
           onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); },
@@ -112,6 +131,16 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
       ),
+
+      // Sim speed control
+      if (_v.simMode && !_camMode)
+        Positioned(
+          bottom: 8, left: 12, right: 80,
+          child: _SimSpeedControl(
+            speed: _v.simTargetSpeed,
+            onChanged: _v.setSimSpeed,
+          ),
+        ),
     ],
   );
 
@@ -176,4 +205,115 @@ class _Btn extends StatelessWidget {
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)]),
     child: Icon(icon, size: 18, color: const Color(0xFF374151)),
   ));
+}
+
+// 3D ego car model via embedded model-viewer
+class _EgoCarModel extends StatefulWidget {
+  final double steer;
+  const _EgoCarModel({required this.steer});
+
+  @override
+  State<_EgoCarModel> createState() => _EgoCarModelState();
+}
+
+class _EgoCarModelState extends State<_EgoCarModel> {
+  late final WebViewController _wv;
+
+  @override
+  void initState() {
+    super.initState();
+    _wv = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..loadHtmlString('''
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<style>*{margin:0;padding:0}body{background:transparent;overflow:hidden}
+model-viewer{width:100vw;height:100vh;--poster-color:transparent}</style>
+</head><body>
+<model-viewer id="mv"
+  src="https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb"
+  alt="ego"
+  camera-orbit="0deg 45deg 2m"
+  field-of-view="25deg"
+  exposure="1.5"
+  shadow-intensity="0"
+  environment-image="neutral"
+  disable-zoom
+  interaction-prompt="none"
+  style="background:transparent"
+></model-viewer>
+<script>
+function setAngle(deg){
+  document.getElementById('mv').cameraOrbit=deg+'deg 45deg 2m';
+}
+</script>
+</body></html>''');
+  }
+
+  @override
+  void didUpdateWidget(_EgoCarModel old) {
+    super.didUpdateWidget(old);
+    if (old.steer != widget.steer) {
+      final angle = (widget.steer * -2).clamp(-30, 30).toInt();
+      _wv.runJavaScript('setAngle($angle)');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => WebViewWidget(controller: _wv);
+}
+
+// Sim speed slider
+class _SimSpeedControl extends StatelessWidget {
+  final double speed;
+  final ValueChanged<double> onChanged;
+  const _SimSpeedControl({required this.speed, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => onChanged(speed - 10),
+            child: const Icon(Icons.remove_rounded, color: Colors.white54, size: 16),
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                activeTrackColor: const Color(0xFFF59E0B),
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+                thumbColor: Colors.white,
+                overlayShape: SliderComponentShape.noOverlay,
+              ),
+              child: Slider(
+                value: speed.clamp(10, 200),
+                min: 10, max: 200,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => onChanged(speed + 10),
+            child: const Icon(Icons.add_rounded, color: Colors.white54, size: 16),
+          ),
+          const SizedBox(width: 6),
+          Text('${speed.toInt()}',
+            style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(' km/h',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 9)),
+        ],
+      ),
+    );
+  }
 }

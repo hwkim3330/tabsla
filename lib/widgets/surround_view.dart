@@ -145,8 +145,8 @@ class _SurroundPainter extends CustomPainter {
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
     for (final o in sorted) _drawVehicle(canvas, size, o, cx, h, b, vx);
 
-    // Ego car last (on top)
-    _drawEgo(canvas, size, cx);
+    // Ego car shadow hint only (3D model overlays on top)
+    _drawEgoShadow(canvas, size, cx);
   }
 
   void _drawRoad(Canvas c, Size s, double cx, double h, double b, double vx) {
@@ -186,7 +186,27 @@ class _SurroundPainter extends CustomPainter {
   }
 
   // === Tesla-style ego car (top-down, detailed) ===
-  void _drawEgo(Canvas c, Size s, double cx) {
+  void _drawEgoShadow(Canvas c, Size s, double cx) {
+    // Just a subtle shadow/glow — actual car is 3D model overlay
+    final bot = s.height * 0.88;
+    c.drawOval(Rect.fromCenter(center: Offset(cx, bot), width: 80, height: 14),
+      Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.08)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    c.drawOval(Rect.fromCenter(center: Offset(cx, bot), width: 50, height: 8),
+      Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.04));
+
+    // Headlight beams
+    final beam = Path()
+      ..moveTo(cx - 20, bot - 30)
+      ..lineTo(cx - 50, bot - 120)
+      ..lineTo(cx + 50, bot - 120)
+      ..lineTo(cx + 20, bot - 30)
+      ..close();
+    c.drawPath(beam, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.025));
+    return;
+  }
+
+  // Keep for reference but unused now
+  void _drawEgoOld(Canvas c, Size s, double cx) {
     final bot = s.height * 0.94;
     final w = 48.0, h = 90.0;
     final x = cx, y = bot - h / 2;
