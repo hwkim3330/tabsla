@@ -73,17 +73,24 @@ body{background:#0C1018;width:100vw;height:100vh}
   background:linear-gradient(180deg,rgba(59,130,246,0.01),rgba(59,130,246,0.06));
   filter:blur(6px);pointer-events:none}
 
-/* Car model */
+/* Car model — smaller to match road */
 model-viewer{
-  position:absolute;bottom:-5%;left:50%;transform:translateX(-50%);
-  width:75%;height:50%;--poster-color:transparent;z-index:5;
+  position:absolute;bottom:-2%;left:50%;transform:translateX(-50%);
+  width:55%;height:38%;--poster-color:transparent;z-index:5;
   pointer-events:none;
 }
 
-/* Detected objects */
-.det{position:absolute;border:1.5px solid;border-radius:3px;z-index:4;
-  display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;
-  font-size:8px;font-weight:600}
+/* Detected objects — 3D box style */
+.det{position:absolute;border-radius:3px;z-index:4;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding-bottom:2px;font-size:7px;font-weight:600;
+  transform:perspective(100px) rotateX(2deg);
+  box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.det-body{width:100%;flex:1;border-radius:3px 3px 0 0;position:relative;overflow:hidden}
+.det-body::after{content:'';position:absolute;top:15%;left:10%;right:10%;height:25%;
+  background:rgba(255,255,255,0.06);border-radius:2px}
+.det-lights{display:flex;justify-content:space-between;width:100%;padding:0 15%}
+.det-light{width:3px;height:2px;border-radius:1px;background:#ef4444;opacity:0.6}
 </style>
 </head>
 <body>
@@ -170,13 +177,29 @@ window.updateDrive = function(spd, str, objs) {
     const x=W*(0.5+o.x*0.28);
     const y=H*o.y*0.75;
     const s=0.4+o.y*0.6;
-    const w=(o.type==='truck'||o.type==='bus'?32:o.type==='pedestrian'?14:24)*s;
-    const h=(o.type==='truck'||o.type==='bus'?48:o.type==='pedestrian'?32:28)*s;
+    const w=(o.type==='truck'||o.type==='bus'?30:o.type==='pedestrian'?12:22)*s;
+    const h=(o.type==='truck'||o.type==='bus'?44:o.type==='pedestrian'?28:26)*s;
     const d=Math.round((1-o.y)*80+5);
     const el=document.createElement('div');
     el.className='det';
-    el.style.cssText=`left:${x-w/2}px;top:${y-h}px;width:${w}px;height:${h}px;border-color:rgba(${col},.45);background:rgba(${col},.06);color:rgba(${col},.5)`;
-    el.textContent=d+'m';
+    el.style.cssText=`left:${x-w/2}px;top:${y-h}px;width:${w}px;height:${h}px;color:rgba(${col},.5)`;
+    // 3D body
+    const body=document.createElement('div');
+    body.className='det-body';
+    body.style.cssText=`background:rgba(${col},.12);border:1px solid rgba(${col},.3)`;
+    el.appendChild(body);
+    // Tail lights for cars/trucks
+    if(o.type==='car'||o.type==='truck'||o.type==='bus'){
+      const lights=document.createElement('div');
+      lights.className='det-lights';
+      lights.innerHTML='<div class="det-light"></div><div class="det-light"></div>';
+      el.appendChild(lights);
+    }
+    // Distance
+    const lbl=document.createElement('span');
+    lbl.textContent=d+'m';
+    lbl.style.cssText=`font-size:${6+s*3}px;margin-top:1px`;
+    el.appendChild(lbl);
     detsEl.appendChild(el);
   });
 };

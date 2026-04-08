@@ -53,12 +53,15 @@ class _MapViewState extends State<MapView> {
   @override
   void didUpdateWidget(MapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.position != oldWidget.position) {
+    // Always try to move map when position changes (even slightly)
+    final oldP = oldWidget.position;
+    final newP = widget.position;
+    if ((oldP.latitude - newP.latitude).abs() > 0.000001 ||
+        (oldP.longitude - newP.longitude).abs() > 0.000001) {
       try {
         _mapController.move(widget.position, _mapController.camera.zoom);
       } catch (_) {}
 
-      // Update current step during navigation
       if (_navigating && _activeRoute != null) {
         _updateNavStep();
       }
