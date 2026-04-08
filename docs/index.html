@@ -7,19 +7,24 @@
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #111318; overflow: hidden; font-family: -apple-system, sans-serif; }
-model-viewer { width: 100vw; height: 100vh; --poster-color: #111318; }
+body { background: #0e1117; overflow: hidden; font-family: -apple-system, sans-serif; }
+model-viewer {
+  width: 100vw; height: 100vh;
+  --poster-color: #0e1117;
+  --progress-bar-color: #3B82F6;
+}
 .tabs { position: fixed; top: 8px; left: 8px; z-index: 10; display: flex; gap: 4px; }
 .tab { padding: 6px 14px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600;
-  cursor: pointer; color: #666; background: rgba(255,255,255,0.05); transition: all 0.2s; }
-.tab.active { color: #ddd; background: rgba(255,255,255,0.1); }
+  cursor: pointer; color: #555; background: rgba(255,255,255,0.04); transition: all 0.2s; }
+.tab.active { color: #e0e0e0; background: rgba(255,255,255,0.08); }
+.tab:active { transform: scale(0.95); }
 </style>
 </head>
 <body>
-<div class="tabs">
-  <button class="tab active" onclick="load('exterior')">Exterior</button>
-  <button class="tab" onclick="load('seat')">Seat</button>
-  <button class="tab" onclick="load('lowpoly')">Low-Poly</button>
+<div class="tabs" id="tabBar">
+  <button class="tab active" onclick="load('exterior', this)">Exterior</button>
+  <button class="tab" onclick="load('seat', this)">Seat</button>
+  <button class="tab" onclick="load('lowpoly', this)">Low-Poly</button>
 </div>
 
 <model-viewer id="viewer"
@@ -27,36 +32,100 @@ model-viewer { width: 100vw; height: 100vh; --poster-color: #111318; }
   alt="3D Car Model"
   auto-rotate
   auto-rotate-delay="0"
-  rotation-per-second="10deg"
+  rotation-per-second="8deg"
   camera-controls
   touch-action="pan-y"
-  shadow-intensity="0.3"
-  exposure="1"
-  camera-orbit="30deg 70deg 3m"
-  field-of-view="30deg"
-  style="background-color: #111318;"
-></model-viewer>
+  shadow-intensity="1"
+  shadow-softness="0.8"
+  exposure="1.8"
+  tone-mapping="commerce"
+  camera-orbit="30deg 65deg 3.5m"
+  min-camera-orbit="auto auto 1.5m"
+  max-camera-orbit="auto auto 8m"
+  field-of-view="28deg"
+  environment-image="neutral"
+  skybox-height="0"
+  style="background-color: #0e1117;"
+>
+  <!-- Three-point lighting setup -->
+  <div slot="hotspot-light1" data-position="3 3 3"></div>
+</model-viewer>
 
 <script>
+const viewer = document.getElementById('viewer');
+
 const models = {
-  exterior: { src: 'models/ferrari.glb', orbit: '30deg 70deg 3m', fov: '30deg', exposure: '1' },
-  seat: { src: 'models/car-seat.glb', orbit: '0deg 75deg 1.5m', fov: '35deg', exposure: '1.2' },
-  lowpoly: { src: 'models/car.glb', orbit: '30deg 70deg 2m', fov: '30deg', exposure: '1' },
+  exterior: {
+    src: 'models/ferrari.glb',
+    orbit: '30deg 65deg 3.5m',
+    fov: '28deg',
+    exposure: 1.8,
+    shadow: 1,
+    toneMap: 'commerce',
+    onLoad: null
+  },
+  seat: {
+    src: 'models/car-seat.glb',
+    orbit: '20deg 70deg 1.2m',
+    fov: '32deg',
+    exposure: 2.2,
+    shadow: 0.8,
+    toneMap: 'commerce',
+    onLoad: makeSeatWhite
+  },
+  lowpoly: {
+    src: 'models/car.glb',
+    orbit: '30deg 65deg 2.5m',
+    fov: '28deg',
+    exposure: 2.0,
+    shadow: 0.8,
+    toneMap: 'commerce',
+    onLoad: null
+  },
 };
 
-function load(name) {
-  const v = document.getElementById('viewer');
+let currentOnLoad = null;
+
+function load(name, btn) {
   const m = models[name];
-  v.src = m.src;
-  v.cameraOrbit = m.orbit;
-  v.fieldOfView = m.fov;
-  v.exposure = m.exposure;
+  viewer.src = m.src;
+  viewer.cameraOrbit = m.orbit;
+  viewer.fieldOfView = m.fov;
+  viewer.exposure = m.exposure;
+  viewer.shadowIntensity = m.shadow;
+  viewer.toneMapping = m.toneMap;
+  currentOnLoad = m.onLoad;
+
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
 }
 
-// Allow Flutter to call via JS
-window.loadModel = load;
+// Make seat materials white/cream
+function makeSeatWhite() {
+  const model = viewer.model;
+  if (!model) return;
+
+  const materials = model.materials;
+  for (const mat of materials) {
+    // Set all materials to white/cream leather look
+    mat.pbrMetallicRoughness.setBaseColorFactor([0.95, 0.93, 0.90, 1.0]);
+    mat.pbrMetallicRoughness.setMetallicFactor(0.0);
+    mat.pbrMetallicRoughness.setRoughnessFactor(0.5);
+  }
+}
+
+viewer.addEventListener('load', () => {
+  if (currentOnLoad) {
+    // Small delay to ensure model is fully ready
+    setTimeout(currentOnLoad, 100);
+  }
+});
+
+// Allow Flutter WebView to call
+window.loadModel = function(name) {
+  const btn = document.querySelector(`.tab:nth-child(${name === 'exterior' ? 1 : name === 'seat' ? 2 : 3})`);
+  load(name, btn);
+};
 </script>
 </body>
 </html>
