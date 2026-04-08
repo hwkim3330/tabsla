@@ -52,6 +52,9 @@ class BottomBar extends StatelessWidget {
           ),
           _Sep(),
 
+          // Drive view (home)
+          _AppIcon(Icons.route_outlined, null, activeApp, onAppSelect),
+          _Sep(),
           // App shortcuts
           _AppIcon(Icons.music_note_rounded, 'music', activeApp, onAppSelect),
           _AppIcon(Icons.show_chart_rounded, 'energy', activeApp, onAppSelect),
@@ -92,13 +95,13 @@ class _Btn extends StatelessWidget {
 }
 
 class _AppIcon extends StatelessWidget {
-  final IconData icon; final String id; final String? activeApp; final ValueChanged<String?> onSelect;
+  final IconData icon; final String? id; final String? activeApp; final ValueChanged<String?> onSelect;
   const _AppIcon(this.icon, this.id, this.activeApp, this.onSelect);
   @override
   Widget build(BuildContext context) {
-    final active = activeApp == id;
+    final active = id == null ? activeApp == null : activeApp == id;
     return GestureDetector(
-      onTap: () => onSelect(active ? null : id),
+      onTap: () => onSelect(id),
       child: Container(
         padding: const EdgeInsets.all(6),
         margin: const EdgeInsets.symmetric(horizontal: 2),

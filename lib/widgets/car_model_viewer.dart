@@ -23,7 +23,6 @@ class _CarModelViewerState extends State<CarModelViewer> {
   static const _cars = [
     _Car('Ferrari', 'ferrari.glb', '30deg 65deg 3m'),
     _Car('Lambo', 'lambo.glb', '30deg 65deg 4m'),
-    _Car('Sedan', 'generic_car.glb', '30deg 65deg 3m'),
     _Car('Low-Poly', 'lowpoly_car.glb', '30deg 65deg 2.5m'),
   ];
 
