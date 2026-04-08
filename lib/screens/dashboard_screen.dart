@@ -104,31 +104,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     children: [
       _camMode ? _camera() : _surround(),
 
-      // 3D ego car — positioned at road end (65% height), centered
-      if (!_camMode)
-        Positioned(
-          left: 0, right: 0,
-          // Road ends at 65% of height, car should sit there
-          top: 0, bottom: 0,
-          child: LayoutBuilder(
-            builder: (ctx, constraints) {
-              final roadEnd = constraints.maxHeight * 0.55;
-              final carH = 140.0;
-              return Stack(
-                children: [
-                  Positioned(
-                    left: constraints.maxWidth / 2 - 80,
-                    top: roadEnd - carH * 0.3,
-                    width: 160,
-                    height: carH,
-                    child: _EgoCarModel(steer: _v.steeringAngle),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-
       // Sensor HUD
       Positioned(right: 6, top: 50, bottom: 60, child: _sensorHud()),
 
@@ -216,69 +191,6 @@ class _Btn extends StatelessWidget {
   ));
 }
 
-// 3D ego car model via embedded model-viewer
-class _EgoCarModel extends StatefulWidget {
-  final double steer;
-  const _EgoCarModel({required this.steer});
-
-  @override
-  State<_EgoCarModel> createState() => _EgoCarModelState();
-}
-
-class _EgoCarModelState extends State<_EgoCarModel> {
-  late final WebViewController _wv;
-
-  @override
-  void initState() {
-    super.initState();
-    _wv = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..loadHtmlString('''
-<!DOCTYPE html><html><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-<style>*{margin:0;padding:0}body{background:#2D3644;overflow:hidden}
-model-viewer{width:100vw;height:100vh;--poster-color:#2D3644}</style>
-</head><body>
-<model-viewer id="mv"
-  src="https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb"
-  alt="ego"
-  camera-controls
-  camera-orbit="180deg 60deg 2m"
-  min-camera-orbit="auto 30deg 1m"
-  max-camera-orbit="auto 90deg 4m"
-  field-of-view="25deg"
-  exposure="1.4"
-  shadow-intensity="0.5"
-  shadow-softness="1"
-  environment-image="neutral"
-  tone-mapping="commerce"
-  interaction-prompt="none"
-  touch-action="pan-y"
-  style="background:#2D3644"
-></model-viewer>
-<script>
-function setAngle(deg){
-  document.getElementById('mv').cameraOrbit=(180+deg)+'deg 60deg 2m';
-}
-</script>
-</body></html>''');
-  }
-
-  @override
-  void didUpdateWidget(_EgoCarModel old) {
-    super.didUpdateWidget(old);
-    if (old.steer != widget.steer) {
-      final angle = (widget.steer * -2).clamp(-30, 30).toInt();
-      _wv.runJavaScript('setAngle($angle)');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => WebViewWidget(controller: _wv);
-}
 
 // Sim speed slider
 class _SimSpeedControl extends StatelessWidget {

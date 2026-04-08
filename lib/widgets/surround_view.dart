@@ -4,13 +4,9 @@ import 'package:flutter/material.dart';
 import '../data/vehicle_state.dart';
 
 class SurroundView extends StatelessWidget {
-  final double speed;
+  final double speed, steeringAngle, batteryLevel, range, animationValue;
   final String gear;
-  final double steeringAngle;
   final List<DetectedObject> objects;
-  final double animationValue;
-  final double batteryLevel;
-  final double range;
 
   const SurroundView({
     super.key,
@@ -25,95 +21,65 @@ class SurroundView extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [Color(0xFF0C1018), Color(0xFF141B26), Color(0xFF1A2332)],
+          colors: [Color(0xFF0B0F16), Color(0xFF121820), Color(0xFF182030)],
         ),
       ),
       child: Stack(
         children: [
-          // Road + lanes + detected objects
           CustomPaint(
             size: Size.infinite,
-            painter: _RoadPainter(
-              speed: speed, steer: steeringAngle,
-              objects: objects, anim: animationValue,
+            painter: _DrivePainter(
+              speed: speed, steer: steeringAngle, objects: objects, anim: animationValue,
             ),
           ),
-
-          // === TOP LEFT: Speed + Gear + Speed Limit (Tesla layout) ===
-          Positioned(
-            top: 12, left: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Gear row
-                Row(
-                  children: ['P','R','N','D'].map((g) {
-                    final active = gear == g;
-                    return Container(
-                      width: 22, height: 22,
-                      margin: const EdgeInsets.only(right: 3),
-                      decoration: BoxDecoration(
-                        color: active ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Center(child: Text(g, style: TextStyle(
-                        color: active ? const Color(0xFF0C1018) : Colors.white.withValues(alpha: 0.15),
-                        fontSize: 11, fontWeight: active ? FontWeight.w800 : FontWeight.w400, height: 1))),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 6),
-                // Speed
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      speed.toInt().toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 52, fontWeight: FontWeight.w300, height: 1, letterSpacing: -3),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6, left: 4),
-                      child: Text('km/h', style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Speed limit sign
-                if (speed > 0)
-                  Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white,
-                      border: Border.all(color: const Color(0xFFDC2626), width: 2.5)),
-                    child: const Center(child: Text('60', style: TextStyle(color: Color(0xFF1F2937), fontSize: 10, fontWeight: FontWeight.w800, height: 1))),
-                  ),
-              ],
-            ),
-          ),
-
-          // === TOP RIGHT: Battery ===
-          Positioned(
-            top: 12, right: 14,
-            child: Row(children: [
-              Text('${range.toInt()} km', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 11)),
-              const SizedBox(width: 6),
-              SizedBox(width: 32, height: 13, child: CustomPaint(painter: _BattPainter(batteryLevel / 100))),
-            ]),
-          ),
-
-          // === Detection count ===
-          if (objects.isNotEmpty)
-            Positioned(
-              top: 12, right: 14,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF34D399))),
-                  const SizedBox(width: 4),
-                  Text('${objects.length}', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 10)),
-                ]),
+          // Speed + Gear — top left (Tesla style)
+          Positioned(top: 12, left: 16, child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gear row
+              Row(children: ['P','R','N','D'].map((g) {
+                final on = gear == g;
+                return Container(
+                  width: 22, height: 22, margin: const EdgeInsets.only(right: 3),
+                  decoration: BoxDecoration(
+                    color: on ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4)),
+                  child: Center(child: Text(g, style: TextStyle(
+                    color: on ? const Color(0xFF0B0F16) : Colors.white.withValues(alpha: 0.12),
+                    fontSize: 11, fontWeight: on ? FontWeight.w800 : FontWeight.w400, height: 1))),
+                );
+              }).toList()),
+              const SizedBox(height: 6),
+              // Speed
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(speed.toInt().toString(), style: const TextStyle(
+                  color: Colors.white, fontSize: 52, fontWeight: FontWeight.w300, height: 1, letterSpacing: -3)),
+                Padding(padding: const EdgeInsets.only(bottom: 6, left: 4),
+                  child: Text('km/h', style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12))),
+              ]),
+              const SizedBox(height: 6),
+              if (speed > 0) Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white,
+                  border: Border.all(color: const Color(0xFFDC2626), width: 2.5)),
+                child: const Center(child: Text('60', style: TextStyle(
+                  color: Color(0xFF1F2937), fontSize: 10, fontWeight: FontWeight.w800, height: 1))),
               ),
-            ),
+            ],
+          )),
+          // Battery — top right
+          Positioned(top: 12, right: 14, child: Row(children: [
+            Text('${range.toInt()} km', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 11)),
+            const SizedBox(width: 6),
+            SizedBox(width: 32, height: 13, child: CustomPaint(painter: _BattPainter(batteryLevel / 100))),
+          ])),
+          // Detection count
+          if (objects.isNotEmpty)
+            Positioned(top: 32, right: 14, child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF34D399))),
+              const SizedBox(width: 4),
+              Text('${objects.length}', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 10)),
+            ])),
         ],
       ),
     );
@@ -135,68 +101,98 @@ class _BattPainter extends CustomPainter {
   bool shouldRepaint(covariant _BattPainter o) => o.lvl != lvl;
 }
 
-class _RoadPainter extends CustomPainter {
+class _DrivePainter extends CustomPainter {
   final double speed, steer, anim;
   final List<DetectedObject> objects;
-  _RoadPainter({required this.speed, required this.steer, required this.objects, required this.anim});
+  _DrivePainter({required this.speed, required this.steer, required this.objects, required this.anim});
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final h = size.height * 0.15; // horizon higher up
-    final b = size.height * 0.65; // road ends at 65% (car sits below)
-    final vx = cx + steer * 2;
+    final horizon = size.height * 0.18;
+    final roadEnd = size.height * 0.62;
+    final vx = cx + steer * 2.5;
 
-    _drawRoad(canvas, size, cx, h, b, vx);
-    _drawBuildings(canvas, size, cx, h, b, vx);
-    _drawLanes(canvas, size, cx, h, b, vx);
-    _drawAutopilotPath(canvas, size, cx, h, b, vx);
+    _drawSky(canvas, size, horizon);
+    _drawRoad(canvas, size, cx, horizon, roadEnd, vx);
+    _drawBuildings(canvas, size, cx, horizon, roadEnd, vx);
+    _drawLanes(canvas, size, cx, horizon, roadEnd, vx);
+    if (speed > 1) _drawAutopilotPath(canvas, size, cx, horizon, roadEnd, vx);
 
-    // Detected objects
+    // Detected objects (far first)
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
-    for (final o in sorted) _drawVehicle(canvas, size, o, cx, h, b, vx);
+    for (final o in sorted) _drawVehicle(canvas, size, o, cx, horizon, roadEnd, vx);
 
-    // Ego car ground shadow
-    _drawEgoGround(canvas, size, cx, b);
+    // Ego car — on the same canvas, moves with road
+    _drawEgoCar(canvas, size, cx, roadEnd);
+  }
+
+  void _drawSky(Canvas c, Size s, double h) {
+    // Horizon glow
+    c.drawRect(Rect.fromLTWH(0, h - 20, s.width, 40),
+      Paint()..shader = LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Colors.transparent, const Color(0xFF1A2540).withValues(alpha: 0.3), Colors.transparent],
+      ).createShader(Rect.fromLTWH(0, h - 20, s.width, 40)));
   }
 
   void _drawRoad(Canvas c, Size s, double cx, double h, double b, double vx) {
-    final wt = 60.0, wb = s.width * 0.85;
+    final wt = 65.0, wb = s.width * 0.88;
 
-    // Shoulder/grass areas
-    final shoulderW = 15.0;
-    final grassL = Path()
-      ..moveTo(0, h)..lineTo(vx - wt / 2 - shoulderW, h)
-      ..lineTo(cx - wb / 2 - shoulderW * 3, b)..lineTo(0, b)..close();
-    final grassR = Path()
-      ..moveTo(s.width, h)..lineTo(vx + wt / 2 + shoulderW, h)
-      ..lineTo(cx + wb / 2 + shoulderW * 3, b)..lineTo(s.width, b)..close();
-    c.drawPath(grassL, Paint()..color = const Color(0xFF152018));
-    c.drawPath(grassR, Paint()..color = const Color(0xFF152018));
+    // Grass
+    final grassPaint = Paint()..color = const Color(0xFF13201A);
+    c.drawRect(Rect.fromLTWH(0, h, s.width, b - h), grassPaint);
 
-    // Shoulder strips
-    final shoulderL = Path()
-      ..moveTo(vx - wt / 2 - shoulderW, h)..lineTo(vx - wt / 2, h)
-      ..lineTo(cx - wb / 2, b)..lineTo(cx - wb / 2 - shoulderW * 3, b)..close();
-    final shoulderR = Path()
-      ..moveTo(vx + wt / 2, h)..lineTo(vx + wt / 2 + shoulderW, h)
-      ..lineTo(cx + wb / 2 + shoulderW * 3, b)..lineTo(cx + wb / 2, b)..close();
-    c.drawPath(shoulderL, Paint()..color = const Color(0xFF1E2630));
-    c.drawPath(shoulderR, Paint()..color = const Color(0xFF1E2630));
+    // Shoulder
+    for (final side in [-1.0, 1.0]) {
+      final shoulder = Path()
+        ..moveTo(vx + side * wt / 2, h)..lineTo(vx + side * (wt / 2 + 12), h)
+        ..lineTo(cx + side * (wb / 2 + 30), b)..lineTo(cx + side * wb / 2, b)..close();
+      c.drawPath(shoulder, Paint()..color = const Color(0xFF1C2630));
+    }
 
-    // Road surface
+    // Road
     final road = Path()
       ..moveTo(vx - wt / 2, h)..lineTo(vx + wt / 2, h)
       ..lineTo(cx + wb / 2, b)..lineTo(cx - wb / 2, b)..close();
     c.drawPath(road, Paint()..shader = LinearGradient(
       begin: Alignment.topCenter, end: Alignment.bottomCenter,
-      colors: [const Color(0xFF252D38), const Color(0xFF2D3644), const Color(0xFF323C4A)],
+      colors: [const Color(0xFF242C38), const Color(0xFF2C3544), const Color(0xFF333D4C)],
     ).createShader(Rect.fromLTWH(0, h, s.width, b - h)));
 
-    // Edge lines (solid white)
-    final edge = Paint()..color = Colors.white.withValues(alpha: 0.3)..strokeWidth = 2;
+    // Edge lines
+    final edge = Paint()..color = Colors.white.withValues(alpha: 0.35)..strokeWidth = 2;
     c.drawLine(Offset(vx - wt / 2, h), Offset(cx - wb / 2, b), edge);
     c.drawLine(Offset(vx + wt / 2, h), Offset(cx + wb / 2, b), edge);
+  }
+
+  void _drawBuildings(Canvas c, Size s, double cx, double h, double b, double vx) {
+    final rng = Random(42);
+    for (final side in [-1.0, 1.0]) {
+      for (int i = 0; i < 7; i++) {
+        final t = i / 7.0;
+        final p = pow(t, 1.5).toDouble();
+        final rw = lerpDouble(65, s.width * 0.88, p)!;
+        final bx = lerpDouble(vx, cx, p)!;
+        final y = lerpDouble(h, b, p)!;
+        final edgeX = bx + side * (rw / 2 + 20 + rng.nextDouble() * 25);
+
+        final bH = (12 + rng.nextDouble() * 30) * (1 - p * 0.4);
+        final bW = 6 + rng.nextDouble() * 14;
+        final alpha = (0.10 - p * 0.05).clamp(0.01, 0.10);
+
+        c.drawRRect(RRect.fromRectAndRadius(
+          Rect.fromLTWH(edgeX - bW / 2, y - bH, bW, bH), const Radius.circular(1)),
+          Paint()..color = Color.fromRGBO(25, 35, 50, alpha));
+
+        // Tree
+        if (rng.nextDouble() > 0.5) {
+          final tx = edgeX + side * (bW / 2 + 4);
+          c.drawCircle(Offset(tx, y - 6 - rng.nextDouble() * 8), 2.5 + p * 3,
+            Paint()..color = Color.fromRGBO(20, 45, 25, alpha * 1.5));
+        }
+      }
+    }
   }
 
   void _drawLanes(Canvas c, Size s, double cx, double h, double b, double vx) {
@@ -207,8 +203,7 @@ class _RoadPainter extends CustomPainter {
         final t2 = ((i + flow + 0.2) / 14).clamp(0.0, 1.0);
         if (t1 >= 1.0) continue;
         final p1 = pow(t1, 1.6).toDouble(), p2 = pow(t2, 1.6).toDouble();
-        final w1 = lerpDouble(60, s.width * 0.85, p1)!;
-        final w2 = lerpDouble(60, s.width * 0.85, p2)!;
+        final w1 = lerpDouble(65, s.width * 0.88, p1)!, w2 = lerpDouble(65, s.width * 0.88, p2)!;
         final x1 = lerpDouble(vx, cx, p1)! + off * w1 / 2;
         final y1 = lerpDouble(h, b, p1)!;
         final x2 = lerpDouble(vx, cx, p2)! + off * w2 / 2;
@@ -220,94 +215,129 @@ class _RoadPainter extends CustomPainter {
     }
   }
 
-  // Buildings + trees along the road
-  void _drawBuildings(Canvas c, Size s, double cx, double h, double b, double vx) {
-    final rng = Random(42); // fixed seed for consistent buildings
-    final flow = (anim * 0.3) % 1.0;
-
-    for (int side = -1; side <= 1; side += 2) { // -1=left, 1=right
-      for (int i = 0; i < 8; i++) {
-        final t = (i + flow * 0.5) / 8.0;
-        if (t > 1) continue;
-        final p = pow(t, 1.6).toDouble();
-        final rw = lerpDouble(60, s.width * 0.85, p)!;
-        final bx = lerpDouble(vx, cx, p)!;
-        final y = lerpDouble(h, b, p)!;
-        final edgeX = bx + side * (rw / 2 + 15 + rng.nextDouble() * 20);
-
-        final bldgH = (15 + rng.nextDouble() * 35) * (1 - p * 0.3);
-        final bldgW = 8 + rng.nextDouble() * 15;
-        final alpha = (0.12 - p * 0.06).clamp(0.02, 0.12);
-
-        // Building
-        c.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(edgeX - bldgW / 2, y - bldgH, bldgW, bldgH),
-            const Radius.circular(1)),
-          Paint()..color = Color.fromRGBO(30, 40, 55, alpha));
-
-        // Windows (tiny dots)
-        if (bldgH > 20) {
-          for (double wy = y - bldgH + 4; wy < y - 4; wy += 6) {
-            for (double wx = edgeX - bldgW / 3; wx < edgeX + bldgW / 3; wx += 5) {
-              if (rng.nextDouble() > 0.5) {
-                c.drawRect(Rect.fromLTWH(wx, wy, 2, 2),
-                  Paint()..color = Color.fromRGBO(100, 140, 200, alpha * 0.5));
-              }
-            }
-          }
-        }
-
-        // Trees between buildings
-        if (rng.nextDouble() > 0.4) {
-          final treeX = edgeX + side * (bldgW / 2 + 5);
-          final treeH = 8 + rng.nextDouble() * 12;
-          c.drawCircle(Offset(treeX, y - treeH),
-            3 + p * 3,
-            Paint()..color = Color.fromRGBO(25, 50, 30, alpha * 1.5));
-          c.drawLine(Offset(treeX, y), Offset(treeX, y - treeH + 2),
-            Paint()..color = Color.fromRGBO(40, 30, 20, alpha)..strokeWidth = 1);
-        }
-      }
-    }
-  }
-
-  // Autopilot blue path line (Tesla style)
   void _drawAutopilotPath(Canvas c, Size s, double cx, double h, double b, double vx) {
-    if (speed < 1) return;
     final path = Path();
     for (int i = 0; i <= 30; i++) {
       final t = i / 30.0;
       final p = pow(t, 1.6).toDouble();
-      final rw = lerpDouble(60, s.width * 0.85, p)!;
       final bx = lerpDouble(vx, cx, p)!;
       final y = lerpDouble(h, b, p)!;
       if (i == 0) path.moveTo(bx, y); else path.lineTo(bx, y);
     }
-    // Blue glow
-    c.drawPath(path, Paint()
-      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke..strokeWidth = 20
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
-    // Blue line
-    c.drawPath(path, Paint()
-      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.25)
+    c.drawPath(path, Paint()..color = const Color(0xFF3B82F6).withValues(alpha: 0.06)
+      ..style = PaintingStyle.stroke..strokeWidth = 22
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
+    c.drawPath(path, Paint()..color = const Color(0xFF3B82F6).withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke..strokeWidth = 3..strokeCap = StrokeCap.round);
   }
 
-  void _drawEgoGround(Canvas c, Size s, double cx, double roadBottom) {
-    // Shadow exactly where 3D model sits
-    final y = s.height * 0.72;
-    c.drawOval(Rect.fromCenter(center: Offset(cx, y), width: 80, height: 14),
-      Paint()..color = Colors.black.withValues(alpha: 0.15)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
-    // Subtle blue reflection
-    c.drawOval(Rect.fromCenter(center: Offset(cx, y + 2), width: 50, height: 6),
-      Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.04));
+  // === EGO CAR — detailed Tesla-like top-down with perspective ===
+  void _drawEgoCar(Canvas c, Size s, double cx, double roadEnd) {
+    final x = cx;
+    final y = roadEnd + s.height * 0.15; // just below road end
+    final w = 52.0, h = 100.0;
+
+    // Ground shadow
+    c.drawOval(Rect.fromCenter(center: Offset(x, y + 5), width: w + 16, height: 14),
+      Paint()..color = Colors.black.withValues(alpha: 0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+
+    // Body shape — smooth sedan
+    final body = Path()
+      ..moveTo(x - w * 0.40, y + h * 0.08)
+      ..cubicTo(x - w * 0.44, y - h * 0.05, x - w * 0.46, y - h * 0.2, x - w * 0.42, y - h * 0.35)
+      ..cubicTo(x - w * 0.38, y - h * 0.5, x - w * 0.28, y - h * 0.65, x - w * 0.15, y - h * 0.78)
+      ..cubicTo(x - w * 0.06, y - h * 0.88, x + w * 0.06, y - h * 0.88, x + w * 0.15, y - h * 0.78)
+      ..cubicTo(x + w * 0.28, y - h * 0.65, x + w * 0.38, y - h * 0.5, x + w * 0.42, y - h * 0.35)
+      ..cubicTo(x + w * 0.46, y - h * 0.2, x + w * 0.44, y - h * 0.05, x + w * 0.40, y + h * 0.08)
+      ..close();
+
+    // Body gradient (3D depth effect)
+    c.drawPath(body, Paint()..shader = LinearGradient(
+      begin: Alignment.centerLeft, end: Alignment.centerRight,
+      colors: [const Color(0xFF1A2435), const Color(0xFF253248), const Color(0xFF2A3850), const Color(0xFF253248), const Color(0xFF1A2435)],
+    ).createShader(Rect.fromCenter(center: Offset(x, y - h * 0.4), width: w, height: h)));
+
+    // Top highlight (roof reflection)
+    final roofHL = Path()
+      ..moveTo(x - w * 0.2, y - h * 0.3)
+      ..cubicTo(x - w * 0.15, y - h * 0.5, x + w * 0.15, y - h * 0.5, x + w * 0.2, y - h * 0.3)
+      ..cubicTo(x + w * 0.15, y - h * 0.4, x - w * 0.15, y - h * 0.4, x - w * 0.2, y - h * 0.3)
+      ..close();
+    c.drawPath(roofHL, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.04));
+
+    // Outline glow
+    c.drawPath(body, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke..strokeWidth = 4
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+
+    // Clean outline
+    c.drawPath(body, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke..strokeWidth = 1.2);
+
+    // Windshield (front)
+    final ws = Path()
+      ..moveTo(x - w * 0.25, y - h * 0.48)
+      ..quadraticBezierTo(x, y - h * 0.58, x + w * 0.25, y - h * 0.48)
+      ..lineTo(x + w * 0.22, y - h * 0.38)
+      ..quadraticBezierTo(x, y - h * 0.40, x - w * 0.22, y - h * 0.38)
+      ..close();
+    c.drawPath(ws, Paint()..color = const Color(0xFF4080C0).withValues(alpha: 0.12));
+    c.drawPath(ws, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 0.5);
+
+    // Rear window
+    final rw = Path()
+      ..moveTo(x - w * 0.24, y - h * 0.05)
+      ..quadraticBezierTo(x, y - h * 0.12, x + w * 0.24, y - h * 0.05)
+      ..lineTo(x + w * 0.22, y + h * 0.02)
+      ..quadraticBezierTo(x, y + h * 0.0, x - w * 0.22, y + h * 0.02)
+      ..close();
+    c.drawPath(rw, Paint()..color = const Color(0xFF4080C0).withValues(alpha: 0.08));
+
+    // Center roof panel (Tesla glass roof)
+    final roof = Path()
+      ..moveTo(x - w * 0.22, y - h * 0.38)
+      ..lineTo(x - w * 0.24, y - h * 0.05)
+      ..quadraticBezierTo(x, y - h * 0.08, x + w * 0.24, y - h * 0.05)
+      ..lineTo(x + w * 0.22, y - h * 0.38)
+      ..quadraticBezierTo(x, y - h * 0.40, x - w * 0.22, y - h * 0.38)
+      ..close();
+    c.drawPath(roof, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.03));
+
+    // Wheels
+    final wheelP = Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.2);
+    for (final pos in [
+      Offset(x - w * 0.48, y - h * 0.08), Offset(x + w * 0.48, y - h * 0.08),
+      Offset(x - w * 0.45, y - h * 0.55), Offset(x + w * 0.45, y - h * 0.55),
+    ]) {
+      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: pos, width: 7, height: 15), const Radius.circular(3)), wheelP);
+      // Wheel rim highlight
+      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: pos, width: 7, height: 15), const Radius.circular(3)),
+        Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.1)..style = PaintingStyle.stroke..strokeWidth = 0.5);
+    }
+
+    // Headlights (front, facing up)
+    final hlPaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.4);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x - w * 0.28, y - h * 0.82), width: 8, height: 3), const Radius.circular(1.5)), hlPaint);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x + w * 0.28, y - h * 0.82), width: 8, height: 3), const Radius.circular(1.5)), hlPaint);
+
+    // Tail lights
+    final tlPaint = Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.5);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x - w * 0.32, y + h * 0.06), width: 10, height: 2.5), const Radius.circular(1)), tlPaint);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x + w * 0.32, y + h * 0.06), width: 10, height: 2.5), const Radius.circular(1)), tlPaint);
+
+    // Headlight beam (forward = up on screen)
+    final beam = Path()
+      ..moveTo(x - w * 0.2, y - h * 0.88)
+      ..lineTo(x - w * 0.45, y - h * 0.88 - 60)
+      ..lineTo(x + w * 0.45, y - h * 0.88 - 60)
+      ..lineTo(x + w * 0.2, y - h * 0.88)
+      ..close();
+    c.drawPath(beam, Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.015));
   }
 
   void _drawVehicle(Canvas c, Size s, DetectedObject o, double cx, double h, double b, double vx) {
     final p = pow(o.y, 1.6).toDouble();
-    final rw = lerpDouble(60, s.width * 0.85, p)!;
+    final rw = lerpDouble(65, s.width * 0.88, p)!;
     final bx = lerpDouble(vx, cx, p)!;
     final x = bx + o.x * rw;
     final y = lerpDouble(h, b, p)!;
@@ -323,46 +353,48 @@ class _RoadPainter extends CustomPainter {
     }
 
     if (o.type == 'car') {
-      final w = 18 * sc, vh = 28 * sc;
+      // Smaller version of ego car shape
+      final w = 16 * sc, vh = 26 * sc;
       final body = Path()
-        ..moveTo(x - w * 0.42, y)
-        ..cubicTo(x - w * 0.45, y - vh * 0.3, x - w * 0.4, y - vh * 0.7, x, y - vh)
-        ..cubicTo(x + w * 0.4, y - vh * 0.7, x + w * 0.45, y - vh * 0.3, x + w * 0.42, y)
+        ..moveTo(x - w * 0.4, y)
+        ..cubicTo(x - w * 0.45, y - vh * 0.3, x - w * 0.38, y - vh * 0.65, x, y - vh)
+        ..cubicTo(x + w * 0.38, y - vh * 0.65, x + w * 0.45, y - vh * 0.3, x + w * 0.4, y)
         ..close();
-      c.drawPath(body, Paint()..color = col.withValues(alpha: 0.15));
-      c.drawPath(body, Paint()..color = col.withValues(alpha: 0.45)..style = PaintingStyle.stroke..strokeWidth = 1);
-      c.drawCircle(Offset(x - w * 0.25, y - 1), 1.2 * sc, Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.6));
-      c.drawCircle(Offset(x + w * 0.25, y - 1), 1.2 * sc, Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.6));
+      c.drawPath(body, Paint()..color = col.withValues(alpha: 0.12));
+      c.drawPath(body, Paint()..color = col.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1);
+      // Tail lights
+      c.drawRect(Rect.fromCenter(center: Offset(x - w * 0.25, y - 1), width: 3 * sc, height: 1.5 * sc),
+        Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.5));
+      c.drawRect(Rect.fromCenter(center: Offset(x + w * 0.25, y - 1), width: 3 * sc, height: 1.5 * sc),
+        Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.5));
     } else if (o.type == 'truck' || o.type == 'bus') {
-      final w = 22 * sc, vh = 40 * sc;
+      final w = 20 * sc, vh = 38 * sc;
       c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x - w / 2, y - vh, w, vh), Radius.circular(2 * sc)),
         Paint()..color = col.withValues(alpha: 0.1));
       c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x - w / 2, y - vh, w, vh), Radius.circular(2 * sc)),
-        Paint()..color = col.withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1);
+        Paint()..color = col.withValues(alpha: 0.3)..style = PaintingStyle.stroke..strokeWidth = 1);
     } else if (o.type == 'pedestrian') {
-      final ph = 16 * sc;
-      final paint = Paint()..color = col.withValues(alpha: 0.55)..strokeWidth = 1.2..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
+      final ph = 14 * sc;
+      final paint = Paint()..color = col.withValues(alpha: 0.5)..strokeWidth = 1.2..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
       c.drawCircle(Offset(x, y - ph), 2.5 * sc, paint);
       c.drawLine(Offset(x, y - ph + 3 * sc), Offset(x, y - ph * 0.35), paint);
       c.drawLine(Offset(x, y - ph * 0.35), Offset(x - 3 * sc, y), paint);
       c.drawLine(Offset(x, y - ph * 0.35), Offset(x + 3 * sc, y), paint);
     } else if (o.type == 'bike') {
-      final paint = Paint()..color = col.withValues(alpha: 0.55)..strokeWidth = 1.2..style = PaintingStyle.stroke;
+      final paint = Paint()..color = col.withValues(alpha: 0.5)..strokeWidth = 1.2..style = PaintingStyle.stroke;
       c.drawCircle(Offset(x, y - 2 * sc), 3 * sc, paint);
-      c.drawCircle(Offset(x, y - 16 * sc), 3 * sc, paint);
-      c.drawLine(Offset(x, y - 2 * sc), Offset(x, y - 16 * sc), paint);
-      c.drawCircle(Offset(x, y - 20 * sc), 2.5 * sc, paint);
+      c.drawLine(Offset(x, y - 2 * sc), Offset(x, y - 14 * sc), paint);
+      c.drawCircle(Offset(x, y - 18 * sc), 2.5 * sc, paint);
     }
 
-    // Distance
     final dist = ((1 - o.y) * 80 + 5).toInt();
     final tp = TextPainter(
-      text: TextSpan(text: '${dist}m', style: TextStyle(color: col.withValues(alpha: 0.35), fontSize: 6 + sc * 3, fontWeight: FontWeight.w500)),
+      text: TextSpan(text: '${dist}m', style: TextStyle(color: col.withValues(alpha: 0.3), fontSize: 6 + sc * 3, fontWeight: FontWeight.w500)),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(c, Offset(x - tp.width / 2, y - 30 * sc - 8));
+    tp.paint(c, Offset(x - tp.width / 2, y - 28 * sc - 8));
   }
 
   @override
-  bool shouldRepaint(covariant _RoadPainter old) => true;
+  bool shouldRepaint(covariant _DrivePainter old) => true;
 }
