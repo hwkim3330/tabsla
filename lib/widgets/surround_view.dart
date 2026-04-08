@@ -108,7 +108,14 @@ class _DrivePainter extends CustomPainter {
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
     for (final o in sorted) _vehicle(c, s, o, cx, h, re, vx, wt, wb);
 
-    _ego(c, s, cx, re);
+    // Ego car shadow only — 3D model overlays on top
+    final ey = re + s.height * 0.18;
+    c.drawOval(Rect.fromCenter(center: Offset(cx, ey + 6), width: 72, height: 14),
+      Paint()..color = Colors.black.withValues(alpha: 0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
+    // Headlight beam
+    c.drawPath(Path()..moveTo(cx - 18, ey - 45)..lineTo(cx - 45, ey - 110)
+      ..lineTo(cx + 45, ey - 110)..lineTo(cx + 18, ey - 45)..close(),
+      Paint()..color = Colors.white.withValues(alpha: 0.01));
   }
 
   void _road(Canvas c, Size s, double cx, double h, double re, double vx, double wt, double wb) {
