@@ -124,7 +124,8 @@ new GLTFLoader().load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb
 });
 
 // Detected vehicles — use cloned GLB models with color tint
-const detColors = {car:0x3B82F6, truck:0xFBBF24, bus:0xFBBF24, pedestrian:0xF87171, bike:0x34D399};
+// Natural vehicle colors — darker/muted tones
+const detColors = {car:0x5577AA, truck:0x8899AA, bus:0x8899AA, pedestrian:0xCC8866, bike:0x66AA88};
 let carTemplate = null;
 
 // Preload car template for cloning
@@ -148,7 +149,7 @@ function getDet(type, x, z){
         c.material = c.material.clone();
         c.material.color.copy(col);
         c.material.transparent = true;
-        c.material.opacity = 0.55;
+        c.material.opacity = 0.75;
         c.castShadow = true;
       }
     });

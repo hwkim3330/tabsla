@@ -260,9 +260,9 @@ class VehicleState extends ChangeNotifier {
   }
 
   void _updateObjects() {
-    if (_rng.nextDouble() < 0.04 && _detectedObjects.length < 8 && _speed > 5) {
-      final types = ['car', 'car', 'car', 'truck', 'pedestrian', 'bike'];
-      final lanes = [-0.35, -0.12, 0.12, 0.35];
+    if (_rng.nextDouble() < 0.02 && _detectedObjects.length < 4 && _speed > 5) {
+      final types = ['car', 'car', 'truck'];
+      final lanes = [-0.3, -0.1, 0.1, 0.3];
       _detectedObjects.add(DetectedObject(
         x: lanes[_rng.nextInt(lanes.length)],
         y: 0.15 + _rng.nextDouble() * 0.65,

@@ -56,10 +56,16 @@ class _MapViewState extends State<MapView> {
     // Always try to move map when position changes (even slightly)
     final oldP = oldWidget.position;
     final newP = widget.position;
-    if ((oldP.latitude - newP.latitude).abs() > 0.000001 ||
-        (oldP.longitude - newP.longitude).abs() > 0.000001) {
+    if ((oldP.latitude - newP.latitude).abs() > 0.0000005 ||
+        (oldP.longitude - newP.longitude).abs() > 0.0000005) {
       try {
-        _mapController.move(widget.position, _mapController.camera.zoom);
+        // Smooth move by interpolating toward target
+        final cam = _mapController.camera;
+        final curLat = cam.center.latitude;
+        final curLng = cam.center.longitude;
+        final smoothLat = curLat + (newP.latitude - curLat) * 0.3;
+        final smoothLng = curLng + (newP.longitude - curLng) * 0.3;
+        _mapController.move(LatLng(smoothLat, smoothLng), cam.zoom);
       } catch (_) {}
 
       if (_navigating && _activeRoute != null) {
