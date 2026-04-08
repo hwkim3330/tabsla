@@ -48,10 +48,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _close() { Haptics.tap(); setState(() => _app = null); }
 
-  Widget _surround() => SurroundView(
-    speed: _v.speed, gear: _v.gear, steeringAngle: _v.steeringAngle,
-    objects: _v.detectedObjects, animationValue: 0,
-    batteryLevel: _v.batteryLevel, range: _v.range,
+  Widget _surround() => AnimatedBuilder(
+    animation: _anim,
+    builder: (_, __) => SurroundView(
+      speed: _v.speed, gear: _v.gear, steeringAngle: _v.steeringAngle,
+      objects: _v.detectedObjects, animationValue: _anim.value,
+      batteryLevel: _v.batteryLevel, range: _v.range,
+    ),
   );
 
   Widget _camera() => CameraSurroundView(
