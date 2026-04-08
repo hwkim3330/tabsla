@@ -71,13 +71,17 @@ class VehicleState extends ChangeNotifier {
   List<LatLng>? get navRoute => _navRoute;
 
   void setNavRoute(List<LatLng> route) {
+    if (route.length < 2) return;
     _navRoute = route;
-    if (_simMode) {
-      // Reset to follow new route
-      _waypointIndex = 0;
-      _segmentProgress = 0;
-      _position = route.first;
-      _trail.clear();
+    // Always reset to start of new route
+    _waypointIndex = 0;
+    _segmentProgress = 0;
+    _position = route.first;
+    _trail.clear();
+    _currentStreet = 'Following route';
+    // Auto-enable sim if parked
+    if (!_simMode) {
+      enableSimulation();
     }
     notifyListeners();
   }
