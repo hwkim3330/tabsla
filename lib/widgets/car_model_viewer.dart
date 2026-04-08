@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_3d_controller/flutter_3d_controller.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import '../data/haptics.dart';
 
 class CarModelViewer extends StatefulWidget {
   final double batteryLevel;
@@ -12,126 +13,111 @@ class CarModelViewer extends StatefulWidget {
 }
 
 class _CarModelViewerState extends State<CarModelViewer> {
-  final _carCtrl = Flutter3DController();
-  final _seatCtrl = Flutter3DController();
+  late final WebViewController _wv;
+  bool _loaded = false;
+  bool _error = false;
   int _tab = 0;
-  bool _carLoaded = false;
-  bool _seatLoaded = false;
-  String? _carError;
-  String? _seatError;
-  double _carProgress = 0;
-  double _seatProgress = 0;
 
   @override
   void initState() {
     super.initState();
-    _carCtrl.onModelLoaded.addListener(() {
-      if (_carCtrl.onModelLoaded.value) {
-        _carCtrl.startRotation(rotationSpeed: 10);
-      }
-    });
-    _seatCtrl.onModelLoaded.addListener(() {
-      if (_seatCtrl.onModelLoaded.value) {
-        _seatCtrl.startRotation(rotationSpeed: 15);
-      }
-    });
+    _wv = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFFF0F0F2))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) => setState(() => _loaded = true),
+        onWebResourceError: (_) => setState(() => _error = true),
+      ))
+      ..loadRequest(Uri.parse('https://hwkim3330.github.io/tabsla/'));
+  }
+
+  void _switchTab(int tab) {
+    Haptics.tap();
+    setState(() => _tab = tab);
+    _wv.runJavaScript("loadModel('${tab == 0 ? 'car' : 'seat'}')");
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [Color(0xFFF8F9FA), Color(0xFFEEEFF1)],
-        ),
-      ),
+      color: const Color(0xFFF0F0F2),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            color: Colors.white,
             child: Row(
               children: [
-                _TabBtn('Exterior', 0, _tab, (i) => setState(() => _tab = i)),
+                _TabBtn('Exterior', 0 == _tab, () => _switchTab(0)),
                 const SizedBox(width: 6),
-                _TabBtn('Seat', 1, _tab, (i) => setState(() => _tab = i)),
+                _TabBtn('Seat', 1 == _tab, () => _switchTab(1)),
                 const Spacer(),
                 GestureDetector(
                   onTap: widget.onClose,
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF888)),
+                    decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF666)),
                   ),
                 ),
               ],
             ),
           ),
 
-          // 3D viewers
+          // WebView
           Expanded(
-            child: IndexedStack(
-              index: _tab,
+            child: Stack(
               children: [
-                // Car model
-                Stack(
-                  children: [
-                    Flutter3DViewer(
-                      activeGestureInterceptor: true,
-                      progressBarColor: const Color(0xFF3B82F6),
-                      enableTouch: true,
-                      controller: _carCtrl,
-                      src: 'https://hwkim3330.github.io/tabsla/models/ferrari.glb',
-                      onProgress: (v) => setState(() => _carProgress = v),
-                      onLoad: (_) => setState(() => _carLoaded = true),
-                      onError: (e) => setState(() => _carError = e),
-                    ),
-                    if (!_carLoaded && _carError == null)
-                      Center(child: _Loading('Car', _carProgress)),
-                    if (_carError != null)
-                      Center(child: _Error(_carError!)),
-                  ],
-                ),
-                // Seat model
-                Stack(
-                  children: [
-                    Flutter3DViewer(
-                      activeGestureInterceptor: true,
-                      progressBarColor: const Color(0xFF3B82F6),
-                      enableTouch: true,
-                      controller: _seatCtrl,
-                      src: 'https://hwkim3330.github.io/tabsla/models/car-seat.glb',
-                      onProgress: (v) => setState(() => _seatProgress = v),
-                      onLoad: (_) => setState(() => _seatLoaded = true),
-                      onError: (e) => setState(() => _seatError = e),
-                    ),
-                    if (!_seatLoaded && _seatError == null)
-                      Center(child: _Loading('Seat', _seatProgress)),
-                    if (_seatError != null)
-                      Center(child: _Error(_seatError!)),
-                  ],
-                ),
+                WebViewWidget(controller: _wv),
+                if (!_loaded && !_error)
+                  const Center(child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF3B82F6))),
+                      SizedBox(height: 8),
+                      Text('Loading 3D...', style: TextStyle(color: Color(0xFF999), fontSize: 11)),
+                    ],
+                  )),
+                if (_error)
+                  Center(child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.wifi_off_rounded, color: Color(0xFFCCC), size: 36),
+                      const SizedBox(height: 6),
+                      const Text('Failed to load', style: TextStyle(color: Color(0xFF999), fontSize: 12)),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _error = false);
+                          _wv.loadRequest(Uri.parse('https://hwkim3330.github.io/tabsla/'));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(8)),
+                          child: const Text('Retry', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  )),
               ],
             ),
           ),
 
-          // Info cards
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          // Info bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: Colors.white,
             child: Row(
               children: [
-                _Card(Icons.battery_charging_full_rounded, '${widget.batteryLevel.toInt()}%',
-                    widget.batteryLevel > 30 ? const Color(0xFF22C55E) : const Color(0xFFEF4444)),
-                const SizedBox(width: 6),
-                _Card(Icons.speed_rounded, '${widget.range.toInt()} km', const Color(0xFF3B82F6)),
-                const SizedBox(width: 6),
-                _Card(Icons.lock_rounded, 'Locked', const Color(0xFF22C55E)),
-                const SizedBox(width: 6),
-                _Card(Icons.tire_repair_rounded, '36 PSI', const Color(0xFF6B7280)),
+                _Info(Icons.battery_charging_full_rounded, '${widget.batteryLevel.toInt()}%',
+                  widget.batteryLevel > 30 ? const Color(0xFF22C55E) : const Color(0xFFEF4444)),
+                const SizedBox(width: 16),
+                _Info(Icons.speed_rounded, '${widget.range.toInt()} km', const Color(0xFF3B82F6)),
+                const SizedBox(width: 16),
+                _Info(Icons.lock_rounded, 'Locked', const Color(0xFF22C55E)),
+                const SizedBox(width: 16),
+                _Info(Icons.tire_repair_rounded, '36 PSI', const Color(0xFF6B7280)),
               ],
             ),
           ),
@@ -141,71 +127,24 @@ class _CarModelViewerState extends State<CarModelViewer> {
   }
 }
 
-class _Loading extends StatelessWidget {
-  final String label;
-  final double progress;
-  const _Loading(this.label, this.progress);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 32, height: 32,
-          child: CircularProgressIndicator(
-            value: progress > 0 ? progress : null,
-            strokeWidth: 2.5,
-            color: const Color(0xFF3B82F6),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          progress > 0 ? '$label ${(progress * 100).toInt()}%' : 'Loading $label...',
-          style: const TextStyle(color: Color(0xFF999), fontSize: 11),
-        ),
-      ],
-    );
-  }
-}
-
-class _Error extends StatelessWidget {
-  final String error;
-  const _Error(this.error);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 32),
-        const SizedBox(height: 6),
-        Text(error, style: const TextStyle(color: Color(0xFF999), fontSize: 10), textAlign: TextAlign.center),
-      ],
-    );
-  }
-}
-
 class _TabBtn extends StatelessWidget {
   final String label;
-  final int index;
-  final int current;
-  final ValueChanged<int> onTap;
-  const _TabBtn(this.label, this.index, this.current, this.onTap);
+  final bool active;
+  final VoidCallback onTap;
+  const _TabBtn(this.label, this.active, this.onTap);
 
   @override
   Widget build(BuildContext context) {
-    final active = index == current;
     return GestureDetector(
-      onTap: () => onTap(index),
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF3B82F6) : Colors.black.withValues(alpha: 0.04),
+          color: active ? const Color(0xFF3B82F6) : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(label, style: TextStyle(
-          color: active ? Colors.white : const Color(0xFF888),
+          color: active ? Colors.white : const Color(0xFF666),
           fontSize: 12, fontWeight: FontWeight.w600,
         )),
       ),
@@ -213,30 +152,18 @@ class _TabBtn extends StatelessWidget {
   }
 }
 
-class _Card extends StatelessWidget {
+class _Info extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-  const _Card(this.icon, this.value, this.color);
+  const _Info(this.icon, this.value, this.color);
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
-          ],
-        ),
-      ),
-    );
+    return Row(children: [
+      Icon(icon, size: 15, color: color),
+      const SizedBox(width: 4),
+      Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+    ]);
   }
 }
