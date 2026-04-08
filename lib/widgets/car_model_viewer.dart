@@ -1,92 +1,85 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 
 class CarModelViewer extends StatefulWidget {
   final double batteryLevel;
+  final double range;
   final VoidCallback onClose;
-  const CarModelViewer({super.key, required this.batteryLevel, required this.onClose});
+  const CarModelViewer({super.key, required this.batteryLevel, required this.range, required this.onClose});
 
   @override
   State<CarModelViewer> createState() => _CarModelViewerState();
 }
 
 class _CarModelViewerState extends State<CarModelViewer> {
-  late final WebViewController _controller;
-  bool _loaded = false;
+  int _tab = 0;
 
-  static const _pageUrl = 'https://hwkim3330.github.io/tabsla/';
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF111318))
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) => setState(() => _loaded = true),
-      ))
-      ..loadRequest(Uri.parse(_pageUrl));
-  }
-
-  void _switchModel(String name) {
-    _controller.runJavaScript("loadModel('$name')");
-  }
+  // GitHub Pages hosted models
+  static const _carUrl = 'https://hwkim3330.github.io/tabsla/models/ferrari.glb';
+  static const _seatUrl = 'https://hwkim3330.github.io/tabsla/models/car-seat.glb';
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF111318),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFFF8F9FA), Color(0xFFEEEFF1)],
+        ),
+      ),
       child: Column(
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
               children: [
-                _Tab('Exterior', true, () => _switchModel('exterior')),
-                const SizedBox(width: 8),
-                _Tab('Seat', false, () => _switchModel('seat')),
-                const SizedBox(width: 8),
-                _Tab('Low-Poly', false, () => _switchModel('lowpoly')),
+                _TabBtn('Car', 0, _tab, (i) => setState(() => _tab = i)),
+                const SizedBox(width: 6),
+                _TabBtn('Seat', 1, _tab, (i) => setState(() => _tab = i)),
                 const Spacer(),
                 GestureDetector(
                   onTap: widget.onClose,
-                  child: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF999)),
+                  ),
                 ),
               ],
             ),
           ),
-          // WebView
+
+          // 3D Model
           Expanded(
-            child: Stack(
+            child: IndexedStack(
+              index: _tab,
               children: [
-                WebViewWidget(controller: _controller),
-                if (!_loaded)
-                  const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6))),
-                        SizedBox(height: 8),
-                        Text('Loading 3D model...', style: TextStyle(color: Colors.white24, fontSize: 11)),
-                      ],
-                    ),
-                  ),
+                Flutter3DViewer(
+                  src: _carUrl,
+                  progressBarColor: const Color(0xFF3B82F6),
+                ),
+                Flutter3DViewer(
+                  src: _seatUrl,
+                  progressBarColor: const Color(0xFF3B82F6),
+                ),
               ],
             ),
           ),
-          // Info bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+
+          // Info cards
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _Info(Icons.battery_charging_full_rounded,
-                    '${widget.batteryLevel.toInt()}%',
-                    widget.batteryLevel > 30 ? const Color(0xFF22C55E) : const Color(0xFFEF4444)),
-                _Info(Icons.lock_rounded, 'Locked', const Color(0xFF22C55E)),
-                _Info(Icons.tire_repair_rounded, '36 PSI', const Color(0xFF22C55E)),
-                _Info(Icons.update_rounded, 'v2026.12', const Color(0xFF3B82F6)),
+                _Card(Icons.battery_charging_full_rounded, '${widget.batteryLevel.toInt()}%',
+                  widget.batteryLevel > 30 ? const Color(0xFF22C55E) : const Color(0xFFEF4444)),
+                const SizedBox(width: 6),
+                _Card(Icons.speed_rounded, '${widget.range.toInt()} km', const Color(0xFF3B82F6)),
+                const SizedBox(width: 6),
+                _Card(Icons.lock_rounded, 'Locked', const Color(0xFF22C55E)),
+                const SizedBox(width: 6),
+                _Card(Icons.tire_repair_rounded, '36 PSI', const Color(0xFF6B7280)),
               ],
             ),
           ),
@@ -96,40 +89,55 @@ class _CarModelViewerState extends State<CarModelViewer> {
   }
 }
 
-class _Tab extends StatelessWidget {
+class _TabBtn extends StatelessWidget {
   final String label;
-  final bool initial;
-  final VoidCallback onTap;
-  const _Tab(this.label, this.initial, this.onTap);
+  final int index;
+  final int current;
+  final ValueChanged<int> onTap;
+  const _TabBtn(this.label, this.index, this.current, this.onTap);
 
   @override
   Widget build(BuildContext context) {
+    final active = index == current;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => onTap(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(6),
+          color: active ? const Color(0xFF3B82F6) : Colors.black.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w500)),
+        child: Text(label, style: TextStyle(
+          color: active ? Colors.white : const Color(0xFF999),
+          fontSize: 12, fontWeight: FontWeight.w600,
+        )),
       ),
     );
   }
 }
 
-class _Info extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final Color color;
-  const _Info(this.icon, this.value, this.color);
+class _Card extends StatelessWidget {
+  final IconData icon; final String value; final Color color;
+  const _Card(this.icon, this.value, this.color);
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Icon(icon, size: 14, color: color),
-      const SizedBox(width: 4),
-      Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-    ]);
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+          ],
+        ),
+      ),
+    );
   }
 }

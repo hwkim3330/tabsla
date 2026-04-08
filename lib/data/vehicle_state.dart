@@ -214,6 +214,7 @@ class VehicleState extends ChangeNotifier {
   }
 
   void toggleAc() { _acOn = !_acOn; notifyListeners(); }
+  void setInsideTemp(double t) { _insideTemp = t.clamp(16, 30); notifyListeners(); }
 
   @override
   void dispose() {

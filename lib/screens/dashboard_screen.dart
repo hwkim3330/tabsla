@@ -13,6 +13,7 @@ import '../widgets/dashcam.dart';
 import '../widgets/car_model_viewer.dart';
 import '../widgets/sketchpad.dart';
 import '../widgets/mini_game.dart';
+import '../widgets/settings_panel.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -28,7 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _anim;
   bool _mapFull = false;
   bool _camMode = false;
-  String? _activeApp; // null, 'music', 'energy', 'dashcam', 'car', 'sketch', 'game'
+  String? _app; // null, music, energy, dashcam, car, sketch, game, settings
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() { _anim.dispose(); _v.dispose(); _s.dispose(); super.dispose(); }
 
-  void _closeApp() { Haptics.tap(); setState(() => _activeApp = null); }
+  void _close() { Haptics.tap(); setState(() => _app = null); }
 
   Widget _surround() => AnimatedBuilder(
     animation: _anim,
@@ -77,13 +78,22 @@ class _DashboardScreenState extends State<DashboardScreen>
   );
 
   Widget? _buildApp() {
-    switch (_activeApp) {
-      case 'music': return MediaPlayer(onClose: _closeApp);
-      case 'energy': return EnergyGraph(power: _v.power, batteryLevel: _v.batteryLevel, speed: _v.speed, onClose: _closeApp);
-      case 'dashcam': return Dashcam(onClose: _closeApp);
-      case 'car': return CarModelViewer(batteryLevel: _v.batteryLevel, onClose: _closeApp);
-      case 'sketch': return Sketchpad(onClose: _closeApp);
-      case 'game': return MiniGame(onClose: _closeApp);
+    switch (_app) {
+      case 'music': return MediaPlayer(onClose: _close);
+      case 'energy': return EnergyGraph(power: _v.power, batteryLevel: _v.batteryLevel, speed: _v.speed, onClose: _close);
+      case 'dashcam': return Dashcam(onClose: _close);
+      case 'car': return CarModelViewer(batteryLevel: _v.batteryLevel, range: _v.range, onClose: _close);
+      case 'sketch': return Sketchpad(onClose: _close);
+      case 'game': return MiniGame(onClose: _close);
+      case 'settings': return SettingsPanel(
+        simMode: _v.simMode, acOn: _v.acOn, insideTemp: _v.insideTemp,
+        fanSpeed: 3, batteryLevel: _v.batteryLevel,
+        onToggleSimMode: () { _v.simMode ? _v.disableSimulation() : _v.enableSimulation(); },
+        onToggleAc: _v.toggleAc,
+        onTempChanged: _v.setInsideTemp,
+        onFanChanged: (_) {},
+        onClose: _close,
+      );
       default: return null;
     }
   }
@@ -92,8 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     children: [
       _camMode ? _camera() : _surround(),
       Positioned(right: 6, top: 36, bottom: 100, child: _sensorHud()),
-      Positioned(
-        top: 8, left: 8,
+      Positioned(top: 8, left: 8,
         child: GestureDetector(
           onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); },
           child: Container(
@@ -108,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final app = _buildApp();
+    final appWidget = _buildApp();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -116,51 +125,40 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Expanded(
             child: _mapFull
-                ? Stack(
-                    children: [
+                ? Stack(children: [
+                    _map(),
+                    Positioned(top: 8, left: 8,
+                      child: GestureDetector(
+                        onTap: () { Haptics.tap(); setState(() => _mapFull = false); },
+                        child: Container(width: 150, height: 100,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)]),
+                          child: ClipRRect(borderRadius: BorderRadius.circular(8), child: _surround()),
+                        ),
+                      ),
+                    ),
+                    Positioned(top: 8, right: 8,
+                      child: _Btn(Icons.fullscreen_exit_rounded, () { Haptics.tap(); setState(() => _mapFull = false); })),
+                  ])
+                : Row(children: [
+                    Expanded(child: appWidget ?? _leftDefault()),
+                    Expanded(child: Stack(children: [
                       _map(),
-                      Positioned(top: 8, left: 8,
-                        child: GestureDetector(
-                          onTap: () { Haptics.tap(); setState(() => _mapFull = false); },
-                          child: Container(
-                            width: 150, height: 100,
-                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)]),
-                            child: ClipRRect(borderRadius: BorderRadius.circular(8), child: _surround()),
-                          ),
-                        ),
-                      ),
                       Positioned(top: 8, right: 8,
-                        child: _MapBtn(Icons.fullscreen_exit_rounded, () { Haptics.tap(); setState(() => _mapFull = false); })),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      // Left panel: app or default surround
-                      Expanded(child: app ?? _leftDefault()),
-                      // Right: map
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            _map(),
-                            Positioned(top: 8, right: 8,
-                              child: _MapBtn(Icons.fullscreen_rounded, () { Haptics.tap(); setState(() => _mapFull = true); })),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                        child: _Btn(Icons.fullscreen_rounded, () { Haptics.tap(); setState(() => _mapFull = true); })),
+                    ])),
+                  ]),
           ),
           BottomBar(
             insideTemp: _v.insideTemp, acOn: _v.acOn,
             batteryLevel: _v.batteryLevel, range: _v.range,
             isParked: _v.isParked, simMode: _v.simMode,
-            activeApp: _activeApp,
+            activeApp: _app,
             onToggleDrive: () { Haptics.medium(); _v.toggleDrive(); },
             onToggleAc: () { Haptics.tap(); _v.toggleAc(); },
             onToggleSim: () { Haptics.doubleTap(); _v.simMode ? _v.disableSimulation() : _v.enableSimulation(); },
-            onAppSelect: (id) { Haptics.tap(); setState(() => _activeApp = id); },
+            onAppSelect: (id) { Haptics.tap(); setState(() => _app = id); },
           ),
         ],
       ),
@@ -168,16 +166,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
-class _MapBtn extends StatelessWidget {
+class _Btn extends StatelessWidget {
   final IconData icon; final VoidCallback onTap;
-  const _MapBtn(this.icon, this.onTap);
+  const _Btn(this.icon, this.onTap);
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(onTap: onTap, child: Container(
-      padding: const EdgeInsets.all(7),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)]),
-      child: Icon(icon, size: 18, color: const Color(0xFF374151)),
-    ));
-  }
+  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: Container(
+    padding: const EdgeInsets.all(7),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)]),
+    child: Icon(icon, size: 18, color: const Color(0xFF374151)),
+  ));
 }

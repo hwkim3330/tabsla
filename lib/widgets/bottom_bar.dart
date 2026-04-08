@@ -59,6 +59,7 @@ class BottomBar extends StatelessWidget {
           _AppIcon(Icons.directions_car_rounded, 'car', activeApp, onAppSelect),
           _AppIcon(Icons.brush_rounded, 'sketch', activeApp, onAppSelect),
           _AppIcon(Icons.sports_esports_rounded, 'game', activeApp, onAppSelect),
+          _AppIcon(Icons.settings_rounded, 'settings', activeApp, onAppSelect),
 
           const Spacer(),
           // Time
