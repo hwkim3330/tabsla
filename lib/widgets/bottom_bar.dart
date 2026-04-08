@@ -45,9 +45,9 @@ class BottomBar extends StatelessWidget {
           GestureDetector(
             onTap: onToggleAc,
             child: Row(children: [
-              Icon(Icons.ac_unit_rounded, size: 15, color: acOn ? const Color(0xFF3B82F6) : const Color(0xFFBBB)),
+              Icon(Icons.ac_unit_rounded, size: 15, color: acOn ? const Color(0xFF3B82F6) : const Color(0xFF888888)),
               const SizedBox(width: 4),
-              Text('${insideTemp.toInt()}°', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF333))),
+              Text('${insideTemp.toInt()}°', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
             ]),
           ),
           _Sep(),
@@ -63,7 +63,7 @@ class BottomBar extends StatelessWidget {
 
           const Spacer(),
           // Time
-          Text(_time(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF999))),
+          Text(_time(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF666666))),
         ],
       ),
     );
@@ -82,9 +82,9 @@ class _Btn extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(children: [
-          Icon(icon, size: 16, color: active ? color : const Color(0xFFBBB)),
+          Icon(icon, size: 16, color: active ? color : const Color(0xFF888888)),
           const SizedBox(width: 3),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? color : const Color(0xFFBBB))),
+          Text(label, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? color : const Color(0xFF888888))),
         ]),
       ),
     );

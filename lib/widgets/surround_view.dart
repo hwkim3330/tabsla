@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../data/vehicle_state.dart';
 
@@ -13,13 +14,9 @@ class SurroundView extends StatelessWidget {
 
   const SurroundView({
     super.key,
-    required this.speed,
-    required this.gear,
-    required this.steeringAngle,
-    required this.objects,
-    required this.animationValue,
-    required this.batteryLevel,
-    required this.range,
+    required this.speed, required this.gear, required this.steeringAngle,
+    required this.objects, required this.animationValue,
+    required this.batteryLevel, required this.range,
   });
 
   @override
@@ -27,325 +24,334 @@ class SurroundView extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF0F1923), Color(0xFF162029), Color(0xFF1B2838)],
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF0C1018), Color(0xFF141B26), Color(0xFF1A2332)],
         ),
       ),
       child: Stack(
         children: [
-          // Road + objects
           CustomPaint(
             size: Size.infinite,
-            painter: _RoadPainter(
-              speed: speed,
-              steeringAngle: steeringAngle,
-              objects: objects,
-              anim: animationValue,
+            painter: _SurroundPainter(
+              speed: speed, steer: steeringAngle,
+              objects: objects, anim: animationValue,
             ),
           ),
-
-          // Speed — large, centered
+          // Speed
           Positioned(
-            bottom: 48,
-            left: 0, right: 0,
+            bottom: 44, left: 0, right: 0,
             child: Column(
               children: [
-                Text(
-                  speed.toInt().toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 88,
-                    fontWeight: FontWeight.w100,
-                    height: 1,
-                    letterSpacing: -6,
-                    fontFamily: 'sans-serif',
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'km/h',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13, fontWeight: FontWeight.w400),
-                ),
+                Text(speed.toInt().toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 82, fontWeight: FontWeight.w100,
+                    height: 1, letterSpacing: -5)),
+                Text('km/h', style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12)),
               ],
             ),
           ),
-
-          // Gear — bottom left, minimal
-          Positioned(
-            bottom: 12, left: 16,
-            child: Row(
-              children: ['P', 'R', 'N', 'D'].map((g) {
-                final active = gear == g;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Text(
-                    g,
-                    style: TextStyle(
-                      color: active ? Colors.white : Colors.white.withValues(alpha: 0.15),
-                      fontSize: 15,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Battery — bottom right
-          Positioned(
-            bottom: 12, right: 16,
-            child: Row(
-              children: [
-                Text(
-                  '${range.toInt()} km',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 36, height: 14,
-                  child: CustomPaint(
-                    painter: _BatteryIconPainter(level: batteryLevel / 100),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Speed limit — top right
+          // Gear
+          Positioned(bottom: 10, left: 14, child: _Gear(gear)),
+          // Battery
+          Positioned(bottom: 10, right: 14, child: _Battery(batteryLevel, range)),
+          // Speed limit
           if (speed > 0)
-            Positioned(
-              top: 14, right: 14,
-              child: Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFDC2626), width: 2.5),
-                  color: Colors.white,
-                ),
-                child: const Center(
-                  child: Text('60', style: TextStyle(color: Color(0xFF1F2937), fontSize: 12, fontWeight: FontWeight.w800, height: 1)),
-                ),
-              ),
-            ),
-
-          // Detected count — top left
+            Positioned(top: 12, right: 12, child: _SpeedSign(60)),
+          // Detection count
           if (objects.isNotEmpty)
-            Positioned(
-              top: 14, left: 14,
-              child: Row(
-                children: [
-                  Container(
-                    width: 5, height: 5,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF34D399)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${objects.length} detected',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
+            Positioned(top: 12, left: 12,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF34D399))),
+                const SizedBox(width: 5),
+                Text('${objects.length}', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 11)),
+              ])),
         ],
       ),
     );
   }
 }
 
-class _BatteryIconPainter extends CustomPainter {
-  final double level;
-  _BatteryIconPainter({required this.level});
-
+class _Gear extends StatelessWidget {
+  final String gear;
+  const _Gear(this.gear);
   @override
-  void paint(Canvas canvas, Size size) {
-    final r = RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, size.width - 3, size.height), const Radius.circular(2));
-    canvas.drawRRect(r, Paint()..color = Colors.white.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1);
-    canvas.drawRect(Rect.fromLTWH(size.width - 3, size.height * 0.3, 3, size.height * 0.4),
-      Paint()..color = Colors.white.withValues(alpha: 0.15));
-
-    final color = level > 0.3 ? const Color(0xFF34D399) : const Color(0xFFEF4444);
-    final fillW = (size.width - 5) * level;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(1.5, 1.5, fillW, size.height - 3), const Radius.circular(1)),
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _BatteryIconPainter old) => old.level != level;
+  Widget build(BuildContext context) => Row(
+    children: ['P','R','N','D'].map((g) => Padding(
+      padding: const EdgeInsets.only(right: 5),
+      child: Text(g, style: TextStyle(
+        color: gear == g ? Colors.white : Colors.white.withValues(alpha: 0.12),
+        fontSize: 14, fontWeight: gear == g ? FontWeight.w700 : FontWeight.w400)),
+    )).toList(),
+  );
 }
 
-class _RoadPainter extends CustomPainter {
-  final double speed, steeringAngle, anim;
-  final List<DetectedObject> objects;
+class _Battery extends StatelessWidget {
+  final double level;
+  final double range;
+  const _Battery(this.level, this.range);
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    Text('${range.toInt()} km', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 11)),
+    const SizedBox(width: 6),
+    SizedBox(width: 32, height: 13, child: CustomPaint(painter: _BattPainter(level / 100))),
+  ]);
+}
 
-  _RoadPainter({required this.speed, required this.steeringAngle, required this.objects, required this.anim});
+class _SpeedSign extends StatelessWidget {
+  final int limit;
+  const _SpeedSign(this.limit);
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 30, height: 30,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white,
+      border: Border.all(color: const Color(0xFFDC2626), width: 2.5)),
+    child: Center(child: Text('$limit', style: const TextStyle(color: Color(0xFF1F2937), fontSize: 11, fontWeight: FontWeight.w800, height: 1))),
+  );
+}
+
+class _BattPainter extends CustomPainter {
+  final double lvl;
+  _BattPainter(this.lvl);
+  @override
+  void paint(Canvas c, Size s) {
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, s.width - 2, s.height), const Radius.circular(2)),
+      Paint()..color = Colors.white.withValues(alpha: 0.12)..style = PaintingStyle.stroke..strokeWidth = 1);
+    c.drawRect(Rect.fromLTWH(s.width - 2, s.height * 0.3, 2, s.height * 0.4), Paint()..color = Colors.white.withValues(alpha: 0.12));
+    final col = lvl > 0.3 ? const Color(0xFF34D399) : const Color(0xFFEF4444);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(1.5, 1.5, (s.width - 5) * lvl, s.height - 3), const Radius.circular(1)), Paint()..color = col);
+  }
+  @override
+  bool shouldRepaint(covariant _BattPainter o) => o.lvl != lvl;
+}
+
+// ============================================================
+// Main painter — road, ego car, detected vehicles
+// ============================================================
+class _SurroundPainter extends CustomPainter {
+  final double speed, steer, anim;
+  final List<DetectedObject> objects;
+  _SurroundPainter({required this.speed, required this.steer, required this.objects, required this.anim});
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final horizon = size.height * 0.28;
-    final bottom = size.height * 0.75;
-    final vx = cx + steeringAngle * 2.5;
+    final h = size.height * 0.28;
+    final b = size.height * 0.72;
+    final vx = cx + steer * 2.5;
 
-    _drawRoad(canvas, size, cx, horizon, bottom, vx);
-    _drawLanes(canvas, size, cx, horizon, bottom, vx);
+    _drawRoad(canvas, size, cx, h, b, vx);
+    _drawLanes(canvas, size, cx, h, b, vx);
 
+    // Detected objects (far first)
     final sorted = List<DetectedObject>.from(objects)..sort((a, b) => a.y.compareTo(b.y));
-    for (final o in sorted) _drawObj(canvas, size, o, cx, horizon, bottom, vx);
+    for (final o in sorted) _drawVehicle(canvas, size, o, cx, h, b, vx);
 
-    _drawEgoCar(canvas, size, cx);
+    // Ego car last (on top)
+    _drawEgo(canvas, size, cx);
   }
 
-  void _drawRoad(Canvas canvas, Size size, double cx, double h, double b, double vx) {
-    final roadTop = 70.0;
-    final roadBot = size.width * 0.9;
-
+  void _drawRoad(Canvas c, Size s, double cx, double h, double b, double vx) {
+    final wt = 80.0, wb = s.width * 0.92;
     final road = Path()
-      ..moveTo(vx - roadTop / 2, h)
-      ..lineTo(vx + roadTop / 2, h)
-      ..lineTo(cx + roadBot / 2, b)
-      ..lineTo(cx - roadBot / 2, b)
-      ..close();
+      ..moveTo(vx - wt / 2, h)..lineTo(vx + wt / 2, h)
+      ..lineTo(cx + wb / 2, b)..lineTo(cx - wb / 2, b)..close();
+    c.drawPath(road, Paint()..shader = const LinearGradient(
+      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+      colors: [Color(0xFF232B38), Color(0xFF2C3545)],
+    ).createShader(Rect.fromLTWH(0, h, s.width, b - h)));
 
-    canvas.drawPath(road, Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
-        colors: [const Color(0xFF252D38), const Color(0xFF2F3846)],
-      ).createShader(Rect.fromLTWH(0, h, size.width, b - h)));
-
-    // Soft edge lines
-    final edge = Paint()..color = Colors.white.withValues(alpha: 0.25)..strokeWidth = 1.5;
-    canvas.drawLine(Offset(vx - roadTop / 2, h), Offset(cx - roadBot / 2, b), edge);
-    canvas.drawLine(Offset(vx + roadTop / 2, h), Offset(cx + roadBot / 2, b), edge);
+    final edge = Paint()..color = Colors.white.withValues(alpha: 0.2)..strokeWidth = 1.5;
+    c.drawLine(Offset(vx - wt / 2, h), Offset(cx - wb / 2, b), edge);
+    c.drawLine(Offset(vx + wt / 2, h), Offset(cx + wb / 2, b), edge);
   }
 
-  void _drawLanes(Canvas canvas, Size size, double cx, double h, double b, double vx) {
-    for (final offset in [-0.25, 0.0, 0.25]) {
-      final n = 14;
+  void _drawLanes(Canvas c, Size s, double cx, double h, double b, double vx) {
+    for (final off in [-0.25, 0.0, 0.25]) {
       final flow = (anim * 2.5) % 1.0;
-      for (int i = 0; i < n; i++) {
-        final t1 = ((i + flow) / n).clamp(0.0, 1.0);
-        final t2 = ((i + flow + 0.2) / n).clamp(0.0, 1.0);
+      for (int i = 0; i < 14; i++) {
+        final t1 = ((i + flow) / 14).clamp(0.0, 1.0);
+        final t2 = ((i + flow + 0.2) / 14).clamp(0.0, 1.0);
         if (t1 >= 1.0) continue;
-
-        final p1 = pow(t1, 1.6).toDouble();
-        final p2 = pow(t2, 1.6).toDouble();
-        final w1 = _lerp(70, size.width * 0.9, p1);
-        final w2 = _lerp(70, size.width * 0.9, p2);
-
-        final x1 = _lerp(vx, cx, p1) + offset * w1 / 2;
-        final y1 = _lerp(h, b, p1);
-        final x2 = _lerp(vx, cx, p2) + offset * w2 / 2;
-        final y2 = _lerp(h, b, p2);
-
-        canvas.drawLine(Offset(x1, y1), Offset(x2, y2), Paint()
-          ..color = Colors.white.withValues(alpha: (p1 * 0.4).clamp(0.03, 0.3))
-          ..strokeWidth = 1 + p1 * 2
-          ..strokeCap = StrokeCap.round);
+        final p1 = pow(t1, 1.6).toDouble(), p2 = pow(t2, 1.6).toDouble();
+        final w1 = lerpDouble(80, s.width * 0.92, p1)!;
+        final w2 = lerpDouble(80, s.width * 0.92, p2)!;
+        final x1 = lerpDouble(vx, cx, p1)! + off * w1 / 2;
+        final y1 = lerpDouble(h, b, p1)!;
+        final x2 = lerpDouble(vx, cx, p2)! + off * w2 / 2;
+        final y2 = lerpDouble(h, b, p2)!;
+        c.drawLine(Offset(x1, y1), Offset(x2, y2), Paint()
+          ..color = Colors.white.withValues(alpha: (p1 * 0.35).clamp(0.02, 0.25))
+          ..strokeWidth = 1 + p1 * 2..strokeCap = StrokeCap.round);
       }
     }
   }
 
-  void _drawEgoCar(Canvas canvas, Size size, double cx) {
-    final bot = size.height * 0.96;
+  // === Tesla-style ego car (top-down, detailed) ===
+  void _drawEgo(Canvas c, Size s, double cx) {
+    final bot = s.height * 0.94;
+    final w = 48.0, h = 90.0;
+    final x = cx, y = bot - h / 2;
 
     // Shadow
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, bot - 2), width: 64, height: 10),
-      Paint()..color = Colors.black.withValues(alpha: 0.25),
-    );
+    c.drawOval(Rect.fromCenter(center: Offset(x, bot + 2), width: w + 10, height: 12),
+      Paint()..color = Colors.black.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
 
-    // Body
-    final body = Path()
-      ..moveTo(cx - 22, bot)
-      ..cubicTo(cx - 24, bot - 12, cx - 25, bot - 28, cx - 20, bot - 50)
-      ..cubicTo(cx - 14, bot - 62, cx - 6, bot - 68, cx, bot - 72)
-      ..cubicTo(cx + 6, bot - 68, cx + 14, bot - 62, cx + 20, bot - 50)
-      ..cubicTo(cx + 25, bot - 28, cx + 24, bot - 12, cx + 22, bot)
-      ..close();
+    // Body outline - smooth sedan shape
+    final body = Path();
+    // Start from rear left
+    body.moveTo(x - w * 0.42, bot);
+    // Left side rear
+    body.cubicTo(x - w * 0.46, bot - h * 0.15, x - w * 0.48, bot - h * 0.3, x - w * 0.44, bot - h * 0.45);
+    // Left side front taper
+    body.cubicTo(x - w * 0.40, bot - h * 0.6, x - w * 0.32, bot - h * 0.78, x - w * 0.18, bot - h * 0.9);
+    // Front nose
+    body.cubicTo(x - w * 0.08, bot - h * 0.97, x + w * 0.08, bot - h * 0.97, x + w * 0.18, bot - h * 0.9);
+    // Right side front
+    body.cubicTo(x + w * 0.32, bot - h * 0.78, x + w * 0.40, bot - h * 0.6, x + w * 0.44, bot - h * 0.45);
+    // Right side rear
+    body.cubicTo(x + w * 0.48, bot - h * 0.3, x + w * 0.46, bot - h * 0.15, x + w * 0.42, bot);
+    body.close();
 
-    canvas.drawPath(body, Paint()..color = const Color(0xFF1E293B));
-    canvas.drawPath(body, Paint()
-      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1);
+    // Fill
+    c.drawPath(body, Paint()..color = const Color(0xFF1E2A3A));
+
+    // Subtle gradient overlay
+    c.drawPath(body, Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [const Color(0xFF2A3A50).withValues(alpha: 0.5), Colors.transparent],
+      ).createShader(Rect.fromLTWH(x - w / 2, bot - h, w, h)));
+
+    // Outline glow
+    c.drawPath(body, Paint()
+      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke..strokeWidth = 3
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+
+    // Clean outline
+    c.drawPath(body, Paint()
+      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke..strokeWidth = 1.2);
 
     // Windshield
     final ws = Path()
-      ..moveTo(cx - 15, bot - 44)
-      ..quadraticBezierTo(cx, bot - 52, cx + 15, bot - 44)
-      ..lineTo(cx + 13, bot - 36)
-      ..quadraticBezierTo(cx, bot - 38, cx - 13, bot - 36)
+      ..moveTo(x - w * 0.28, bot - h * 0.52)
+      ..quadraticBezierTo(x, bot - h * 0.60, x + w * 0.28, bot - h * 0.52)
+      ..lineTo(x + w * 0.24, bot - h * 0.42)
+      ..quadraticBezierTo(x, bot - h * 0.44, x - w * 0.24, bot - h * 0.42)
       ..close();
-    canvas.drawPath(ws, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.15));
+    c.drawPath(ws, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.08));
+    c.drawPath(ws, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.2)..style = PaintingStyle.stroke..strokeWidth = 0.5);
 
-    // Wheels
-    final wp = Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.3);
-    for (final o in [Offset(cx - 26, bot - 12), Offset(cx + 26, bot - 12), Offset(cx - 24, bot - 48), Offset(cx + 24, bot - 48)]) {
-      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 6, height: 12), const Radius.circular(2)), wp);
+    // Rear window
+    final rw = Path()
+      ..moveTo(x - w * 0.26, bot - h * 0.15)
+      ..quadraticBezierTo(x, bot - h * 0.2, x + w * 0.26, bot - h * 0.15)
+      ..lineTo(x + w * 0.24, bot - h * 0.08)
+      ..quadraticBezierTo(x, bot - h * 0.1, x - w * 0.24, bot - h * 0.08)
+      ..close();
+    c.drawPath(rw, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.06));
+
+    // Wheels (4 rounded rects)
+    final wheelP = Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.25);
+    final wheelR = const Radius.circular(2.5);
+    for (final pos in [
+      Offset(x - w * 0.5, bot - h * 0.15), Offset(x + w * 0.5, bot - h * 0.15),
+      Offset(x - w * 0.47, bot - h * 0.6), Offset(x + w * 0.47, bot - h * 0.6),
+    ]) {
+      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: pos, width: 6, height: 14), wheelR), wheelP);
     }
+
+    // Headlight beams
+    final beam = Path()
+      ..moveTo(x - w * 0.15, bot - h)
+      ..lineTo(x - w * 0.5, bot - h - 80)
+      ..lineTo(x + w * 0.5, bot - h - 80)
+      ..lineTo(x + w * 0.15, bot - h)
+      ..close();
+    c.drawPath(beam, Paint()..color = const Color(0xFF60A5FA).withValues(alpha: 0.03));
   }
 
-  void _drawObj(Canvas canvas, Size size, DetectedObject o, double cx, double h, double b, double vx) {
+  // === Detected vehicles - Tesla style clean silhouettes ===
+  void _drawVehicle(Canvas c, Size s, DetectedObject o, double cx, double h, double b, double vx) {
     final p = pow(o.y, 1.6).toDouble();
-    final w = _lerp(70, size.width * 0.9, p);
-    final bx = _lerp(vx, cx, p);
-    final x = bx + o.x * w;
-    final y = _lerp(h, b, p);
-    final s = 0.2 + p * 0.8;
+    final rw = lerpDouble(80, s.width * 0.92, p)!;
+    final bx = lerpDouble(vx, cx, p)!;
+    final x = bx + o.x * rw;
+    final y = lerpDouble(h, b, p)!;
+    final sc = 0.25 + p * 0.75;
 
-    Color c;
+    Color col;
     switch (o.type) {
-      case 'car': c = const Color(0xFF60A5FA); break;
-      case 'truck': case 'bus': c = const Color(0xFFFBBF24); break;
-      case 'pedestrian': c = const Color(0xFFF87171); break;
-      case 'bike': c = const Color(0xFF34D399); break;
-      default: c = const Color(0xFF9CA3AF);
+      case 'car': col = const Color(0xFF60A5FA); break;
+      case 'truck': case 'bus': col = const Color(0xFFFBBF24); break;
+      case 'pedestrian': col = const Color(0xFFF87171); break;
+      case 'bike': col = const Color(0xFF34D399); break;
+      default: col = const Color(0xFF94A3B8);
     }
 
     if (o.type == 'car') {
-      final cw = 18 * s; final ch = 30 * s;
-      final path = Path()
-        ..moveTo(x - cw / 2, y)
-        ..cubicTo(x - cw / 2, y - ch * 0.4, x - cw / 2, y - ch * 0.7, x, y - ch)
-        ..cubicTo(x + cw / 2, y - ch * 0.7, x + cw / 2, y - ch * 0.4, x + cw / 2, y)
-        ..close();
-      canvas.drawPath(path, Paint()..color = c.withValues(alpha: 0.2));
-      canvas.drawPath(path, Paint()..color = c.withValues(alpha: 0.6)..style = PaintingStyle.stroke..strokeWidth = 1);
+      _drawCarSilhouette(c, x, y, sc, col);
     } else if (o.type == 'truck' || o.type == 'bus') {
-      final tw = 22 * s; final th = 42 * s;
-      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x - tw / 2, y - th, tw, th), Radius.circular(2 * s)),
-        Paint()..color = c.withValues(alpha: 0.15));
-      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x - tw / 2, y - th, tw, th), Radius.circular(2 * s)),
-        Paint()..color = c.withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 1);
+      _drawTruckSilhouette(c, x, y, sc, col);
     } else if (o.type == 'pedestrian') {
-      final ph = 16 * s;
-      final sp = Paint()..color = c.withValues(alpha: 0.7)..strokeWidth = 1.2..style = PaintingStyle.stroke;
-      canvas.drawCircle(Offset(x, y - ph), 2.5 * s, sp);
-      canvas.drawLine(Offset(x, y - ph + 3 * s), Offset(x, y - ph * 0.3), sp);
-      canvas.drawLine(Offset(x, y - ph * 0.3), Offset(x - 3 * s, y), sp);
-      canvas.drawLine(Offset(x, y - ph * 0.3), Offset(x + 3 * s, y), sp);
+      _drawPedSilhouette(c, x, y, sc, col);
     } else if (o.type == 'bike') {
-      final bh = 18 * s;
-      final sp = Paint()..color = c.withValues(alpha: 0.7)..strokeWidth = 1.2..style = PaintingStyle.stroke;
-      canvas.drawCircle(Offset(x, y - 2 * s), 3 * s, sp);
-      canvas.drawLine(Offset(x, y - 2 * s), Offset(x, y - bh + 4 * s), sp);
-      canvas.drawCircle(Offset(x, y - bh), 2.5 * s, sp);
+      _drawBikeSilhouette(c, x, y, sc, col);
     }
 
-    // Distance
+    // Distance label
     final dist = ((1 - o.y) * 80 + 5).toInt();
     final tp = TextPainter(
-      text: TextSpan(text: '${dist}m', style: TextStyle(color: c.withValues(alpha: 0.5), fontSize: 7 + s * 3, fontWeight: FontWeight.w500)),
+      text: TextSpan(text: '${dist}m', style: TextStyle(color: col.withValues(alpha: 0.4), fontSize: 6 + sc * 4, fontWeight: FontWeight.w500)),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset(x - tp.width / 2, y - (o.type == 'car' ? 30 * s : 20 * s) - 10));
+    tp.paint(c, Offset(x - tp.width / 2, y - 35 * sc - 10));
   }
 
-  double _lerp(double a, double b, double t) => a + (b - a) * t;
+  void _drawCarSilhouette(Canvas c, double x, double y, double s, Color col) {
+    final w = 20 * s, h = 32 * s;
+
+    final body = Path()
+      ..moveTo(x - w * 0.42, y)
+      ..cubicTo(x - w * 0.46, y - h * 0.2, x - w * 0.45, y - h * 0.5, x - w * 0.35, y - h * 0.7)
+      ..cubicTo(x - w * 0.2, y - h * 0.9, x + w * 0.2, y - h * 0.9, x + w * 0.35, y - h * 0.7)
+      ..cubicTo(x + w * 0.45, y - h * 0.5, x + w * 0.46, y - h * 0.2, x + w * 0.42, y)
+      ..close();
+
+    c.drawPath(body, Paint()..color = col.withValues(alpha: 0.15));
+    c.drawPath(body, Paint()..color = col.withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 1);
+
+    // Tail lights
+    c.drawCircle(Offset(x - w * 0.3, y - 1), 1.5 * s, Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.7));
+    c.drawCircle(Offset(x + w * 0.3, y - 1), 1.5 * s, Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.7));
+  }
+
+  void _drawTruckSilhouette(Canvas c, double x, double y, double s, Color col) {
+    final w = 24 * s, h = 44 * s;
+    final rr = RRect.fromRectAndRadius(Rect.fromLTWH(x - w / 2, y - h, w, h), Radius.circular(3 * s));
+    c.drawRRect(rr, Paint()..color = col.withValues(alpha: 0.12));
+    c.drawRRect(rr, Paint()..color = col.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1);
+  }
+
+  void _drawPedSilhouette(Canvas c, double x, double y, double s, Color col) {
+    final h = 18 * s;
+    final paint = Paint()..color = col.withValues(alpha: 0.6)..strokeWidth = 1.2..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
+    c.drawCircle(Offset(x, y - h), 2.5 * s, paint);
+    c.drawLine(Offset(x, y - h + 3 * s), Offset(x, y - h * 0.35), paint);
+    c.drawLine(Offset(x, y - h * 0.35), Offset(x - 3.5 * s, y), paint);
+    c.drawLine(Offset(x, y - h * 0.35), Offset(x + 3.5 * s, y), paint);
+    c.drawLine(Offset(x, y - h * 0.65), Offset(x - 3 * s, y - h * 0.4), paint);
+    c.drawLine(Offset(x, y - h * 0.65), Offset(x + 3 * s, y - h * 0.4), paint);
+  }
+
+  void _drawBikeSilhouette(Canvas c, double x, double y, double s, Color col) {
+    final paint = Paint()..color = col.withValues(alpha: 0.6)..strokeWidth = 1.2..style = PaintingStyle.stroke;
+    c.drawCircle(Offset(x, y - 2 * s), 3 * s, paint);
+    c.drawCircle(Offset(x, y - 18 * s), 3 * s, paint);
+    c.drawLine(Offset(x, y - 2 * s), Offset(x, y - 18 * s), paint);
+    c.drawCircle(Offset(x, y - 22 * s), 2.5 * s, paint);
+  }
 
   @override
-  bool shouldRepaint(covariant _RoadPainter old) => true;
+  bool shouldRepaint(covariant _SurroundPainter old) => true;
 }
