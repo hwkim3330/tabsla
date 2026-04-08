@@ -23,186 +23,204 @@ class _SurroundViewState extends State<SurroundView> {
   late final WebViewController _wv;
   bool _loaded = false;
 
+  // Three.js via ES modules (type="module") — works with loadHtmlString on Android
   static const _html = r'''
 <!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-<style>
-*{margin:0;padding:0;overflow:hidden}
-body{background:#0C1018;width:100vw;height:100vh}
+<style>*{margin:0;padding:0}body{background:#0C1018;overflow:hidden;touch-action:none}</style>
+</head><body>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
-/* Entire scene rotates together on touch */
-.scene{
-  position:absolute;inset:0;
-  transform-origin:50% 70%;
-  transition:transform 0.1s ease-out;
-  transform:perspective(800px) rotateY(0deg) rotateX(0deg);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0C1018);
+scene.fog = new THREE.FogExp2(0x0C1018, 0.012);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 5, 9);
+camera.lookAt(0, 0, -5);
+
+const R = new THREE.WebGLRenderer({antialias:true});
+R.setSize(innerWidth, innerHeight);
+R.setPixelRatio(Math.min(devicePixelRatio, 2));
+R.shadowMap.enabled = true;
+R.shadowMap.type = THREE.PCFSoftShadowMap;
+R.toneMapping = THREE.ACESFilmicToneMapping;
+R.toneMappingExposure = 1.3;
+document.body.appendChild(R.domElement);
+
+const ctrl = new OrbitControls(camera, R.domElement);
+ctrl.enableDamping = true; ctrl.dampingFactor = 0.05;
+ctrl.target.set(0, 0.3, -2);
+ctrl.maxPolarAngle = Math.PI*0.42; ctrl.minPolarAngle = Math.PI*0.08;
+ctrl.minDistance = 4; ctrl.maxDistance = 16; ctrl.enablePan = false;
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x334466, 0.7));
+const sun = new THREE.DirectionalLight(0x6688bb, 0.7);
+sun.position.set(-5, 15, 10); sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-25; sun.shadow.camera.right=25;
+sun.shadow.camera.top=25; sun.shadow.camera.bottom=-25;
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x223344, 0.3).translateX(5).translateY(8).translateZ(-5));
+
+// Headlights
+for(const x of [-0.5, 0.5]){
+  const hl = new THREE.SpotLight(0xffeedd, 2, 35, Math.PI*0.14, 0.5);
+  hl.position.set(x, 0.5, -1.5);
+  const tgt = new THREE.Object3D(); tgt.position.set(x*2, 0, -20);
+  scene.add(tgt); hl.target = tgt; scene.add(hl);
 }
 
-.sky{position:absolute;top:0;left:0;right:0;height:20%;
-  background:linear-gradient(180deg,#080C14,#101820 60%,#182030)}
+// Ground
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
+  new THREE.MeshStandardMaterial({color:0x0a130a, roughness:0.95}));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; gnd.receiveShadow=true; scene.add(gnd);
 
-.road-wrap{position:absolute;top:18%;bottom:0;left:0;right:0;overflow:hidden}
+// Road
+const RW=8, RL=200;
+const rd = new THREE.Mesh(new THREE.PlaneGeometry(RW, RL),
+  new THREE.MeshStandardMaterial({color:0x282e38, roughness:0.85}));
+rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); rd.receiveShadow=true; scene.add(rd);
 
-/* Road with CSS perspective */
-.road{position:absolute;left:35%;right:35%;top:0;bottom:0;
-  background:linear-gradient(180deg,#222A36,#2C3544 50%,#363F50)}
-
-/* Grass */
-.grass-l{position:absolute;left:0;right:66%;top:0;bottom:0;background:#0D1A10}
-.grass-r{position:absolute;left:66%;right:0;top:0;bottom:0;background:#0D1A10}
-
-/* Shoulders */
-.sh-l{position:absolute;left:33%;width:2%;top:0;bottom:0;background:#1A2630}
-.sh-r{position:absolute;right:33%;width:2%;top:0;bottom:0;background:#1A2630}
-
-/* Edge lines */
-.edge{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.3)}
-.edge-l{left:35%}.edge-r{right:35%}
-
-/* Lane dashes */
-.lane{position:absolute;left:50%;width:2px;transform:translateX(-50%)}
-.lane.a{margin-left:-7.5%}.lane.b{margin-left:0}.lane.c{margin-left:7.5%}
-.dash{width:2px;height:18px;background:rgba(255,255,255,0.12);margin-bottom:24px;border-radius:1px}
-@keyframes flow{from{transform:translateY(0)}to{transform:translateY(42px)}}
-.ls{animation:flow 0.8s linear infinite}
-
-/* Blue AP path */
-.ap{position:absolute;left:48.5%;width:3%;top:0;bottom:0;
-  background:linear-gradient(180deg,rgba(59,130,246,0.01),rgba(59,130,246,0.06));
-  filter:blur(6px);pointer-events:none}
-
-/* Car model — smaller to match road */
-model-viewer{
-  position:absolute;bottom:-2%;left:50%;transform:translateX(-50%);
-  width:55%;height:38%;--poster-color:transparent;z-index:5;
-  pointer-events:none;
+// Edges
+for(const x of [-RW/2, RW/2]){
+  const e = new THREE.Mesh(new THREE.PlaneGeometry(0.12, RL),
+    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.35}));
+  e.rotation.x=-Math.PI/2; e.position.set(x, 0.01, -RL/2+10); scene.add(e);
 }
 
-/* Detected objects — 3D box style */
-.det{position:absolute;border-radius:3px;z-index:4;
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  padding-bottom:2px;font-size:7px;font-weight:600;
-  transform:perspective(100px) rotateX(2deg);
-  box-shadow:0 2px 8px rgba(0,0,0,0.3)}
-.det-body{width:100%;flex:1;border-radius:3px 3px 0 0;position:relative;overflow:hidden}
-.det-body::after{content:'';position:absolute;top:15%;left:10%;right:10%;height:25%;
-  background:rgba(255,255,255,0.06);border-radius:2px}
-.det-lights{display:flex;justify-content:space-between;width:100%;padding:0 15%}
-.det-light{width:3px;height:2px;border-radius:1px;background:#ef4444;opacity:0.6}
-</style>
-</head>
-<body>
-<div class="scene" id="scene">
-  <div class="sky"></div>
-  <div class="road-wrap">
-    <div class="grass-l"></div><div class="grass-r"></div>
-    <div class="sh-l"></div><div class="sh-r"></div>
-    <div class="road"></div>
-    <div class="edge edge-l"></div><div class="edge edge-r"></div>
-    <div class="lane a"><div class="ls" id="l1"></div></div>
-    <div class="lane b"><div class="ls" id="l2"></div></div>
-    <div class="lane c"><div class="ls" id="l3"></div></div>
-    <div class="ap"></div>
-    <div id="dets"></div>
-  </div>
-  <model-viewer id="mv"
-    src="https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb"
-    alt="car"
-    camera-orbit="180deg 55deg 2.2m"
-    field-of-view="25deg"
-    exposure="1.4"
-    shadow-intensity="0.8"
-    shadow-softness="1"
-    environment-image="neutral"
-    tone-mapping="commerce"
-    interaction-prompt="none"
-    style="background:transparent"
-  ></model-viewer>
-</div>
+// Dashes
+const dG = new THREE.Group();
+for(let l=-1;l<=1;l++) for(let i=0;i<40;i++){
+  const d = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 2),
+    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.2}));
+  d.rotation.x=-Math.PI/2; d.position.set(l*RW/4, 0.01, -i*5); dG.add(d);
+}
+scene.add(dG);
 
-<script>
-const sc = document.getElementById('scene');
-const mv = document.getElementById('mv');
-const detsEl = document.getElementById('dets');
-const lanes = ['l1','l2','l3'].map(id=>document.getElementById(id));
+// Blue path
+const bp = new THREE.Mesh(new THREE.PlaneGeometry(1.5, RL),
+  new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.06}));
+bp.rotation.x=-Math.PI/2; bp.position.set(0, 0.007, -RL/2+10); scene.add(bp);
 
-// Fill dashes
-lanes.forEach(l=>{for(let i=0;i<15;i++){const d=document.createElement('div');d.className='dash';l.appendChild(d)}});
+// Buildings
+const bMat = new THREE.MeshStandardMaterial({color:0x141c28, roughness:0.9});
+const wMat = new THREE.MeshBasicMaterial({color:0x2a4060, transparent:true, opacity:0.25});
+let seed=42; const rn=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};
+for(let sd=-1;sd<=1;sd+=2) for(let i=0;i<25;i++){
+  const h=3+rn()*12, w=2+rn()*4, d=2+rn()*3;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), bMat);
+  const x=sd*(RW/2+3+rn()*8), z=-i*8+rn()*3;
+  b.position.set(x, h/2, z); b.castShadow=true; scene.add(b);
+  // Windows
+  if(h>5) for(let wy=1.5;wy<h-1;wy+=1.8) for(let wx=-w/3;wx<=w/3;wx+=1.2)
+    if(rn()>0.4){
+      const wn=new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.6), wMat);
+      wn.position.set(x+(sd>0?-w/2-0.01:w/2+0.01), wy, z+wx);
+      wn.rotation.y=sd>0?Math.PI/2:-Math.PI/2; scene.add(wn);
+    }
+  // Trees
+  if(rn()>0.5){
+    const th=1.5+rn()*2;
+    scene.add(new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,th),
+      new THREE.MeshStandardMaterial({color:0x3a2a1a})).translateX(sd*(RW/2+1.5)).translateY(th/2).translateZ(z+2));
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.7+rn()*0.5,6,6),
+      new THREE.MeshStandardMaterial({color:0x1a3a1a})).translateX(sd*(RW/2+1.5)).translateY(th+0.3).translateZ(z+2));
+  }
+}
 
-// Touch rotate — entire scene
-let touchX=0, touchY=0, rotY=0, rotX=0;
-document.addEventListener('touchstart',e=>{
-  const t=e.touches[0]; touchX=t.clientX; touchY=t.clientY;
-},{passive:true});
-document.addEventListener('touchmove',e=>{
-  const t=e.touches[0];
-  rotY += (t.clientX - touchX) * 0.15;
-  rotX += (t.clientY - touchY) * 0.08;
-  rotY = Math.max(-25, Math.min(25, rotY));
-  rotX = Math.max(-10, Math.min(15, rotX));
-  touchX = t.clientX; touchY = t.clientY;
-  sc.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
-},{passive:true});
-document.addEventListener('touchend',()=>{
-  // Slowly return to center
-  const ret = setInterval(()=>{
-    rotY *= 0.9; rotX *= 0.9;
-    if(Math.abs(rotY)<0.3 && Math.abs(rotX)<0.3){rotY=0;rotX=0;clearInterval(ret)}
-    sc.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
-  },30);
+// Ego car
+let ego = null;
+new GLTFLoader().load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb', g=>{
+  ego = g.scene; ego.scale.set(1.2, 1.2, 1.2);
+  ego.position.set(0, 0.05, 0); ego.rotation.y = Math.PI;
+  ego.traverse(c=>{if(c.isMesh){c.castShadow=true; c.receiveShadow=true}});
+  scene.add(ego);
 });
 
-let speed=0;
-const CC={car:'59,130,246',truck:'251,191,36',bus:'251,191,36',pedestrian:'248,113,113',bike:'52,211,153'};
+// Detected vehicles — reuse meshes
+const detPool = [];
+const detColors = {car:0x3B82F6, truck:0xFBBF24, bus:0xFBBF24, pedestrian:0xF87171, bike:0x34D399};
 
-window.updateDrive = function(spd, str, objs) {
+function getDet(type, x, z){
+  const col = detColors[type]||0x888888;
+  const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.5, roughness:0.4});
+  let m;
+  if(type==='car'){
+    m = new THREE.Group();
+    m.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.55, 3.2), mat).translateY(0.47));
+    m.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 1.6), mat).translateY(0.9).translateZ(-0.2));
+    // Tail lights
+    const tl = new THREE.MeshBasicMaterial({color:0xff3333});
+    m.add(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), tl).translateX(-0.55).translateY(0.48).translateZ(1.61));
+    m.add(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), tl).translateX(0.55).translateY(0.48).translateZ(1.61));
+  } else if(type==='truck'||type==='bus'){
+    m = new THREE.Group();
+    m.add(new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.2, 4.5), mat).translateY(1.3));
+  } else if(type==='pedestrian'){
+    m = new THREE.Group();
+    m.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.7), mat).translateY(0.9));
+    m.add(new THREE.Mesh(new THREE.SphereGeometry(0.13), mat).translateY(1.4));
+  } else {
+    m = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1, 1.3), mat);
+    m.position.y = 0.5;
+  }
+  m.position.set(x, 0, z);
+  scene.add(m);
+  return m;
+}
+
+let speed=0, dOff=0;
+const dets = [];
+
+window.updateDrive = function(spd, str, objs){
   speed = spd;
-  // Lane speed
-  const dur = spd > 5 ? Math.max(0.15, 2.5/spd) : 99;
-  lanes.forEach(l=>l.style.animationDuration=dur+'s');
+  if(ego) ego.rotation.y = Math.PI + THREE.MathUtils.degToRad(str * -0.5);
 
-  // Steer — camera orbit + slight scene shift
-  mv.cameraOrbit = (180 + str*-0.6)+'deg 55deg 2.2m';
+  // Remove old detected
+  dets.forEach(d => {d.traverse(c=>{if(c.geometry)c.geometry.dispose()}); scene.remove(d)});
+  dets.length = 0;
 
-  // Detected
-  detsEl.innerHTML='';
-  if(!objs) return;
-  const arr = typeof objs==='string' ? JSON.parse(objs) : objs;
-  const wrap = detsEl.parentElement;
-  const W=wrap.offsetWidth, H=wrap.offsetHeight;
-  arr.forEach(o=>{
-    const col=CC[o.type]||'148,163,184';
-    const x=W*(0.5+o.x*0.28);
-    const y=H*o.y*0.75;
-    const s=0.4+o.y*0.6;
-    const w=(o.type==='truck'||o.type==='bus'?30:o.type==='pedestrian'?12:22)*s;
-    const h=(o.type==='truck'||o.type==='bus'?44:o.type==='pedestrian'?28:26)*s;
-    const d=Math.round((1-o.y)*80+5);
-    const el=document.createElement('div');
-    el.className='det';
-    el.style.cssText=`left:${x-w/2}px;top:${y-h}px;width:${w}px;height:${h}px;color:rgba(${col},.5)`;
-    // 3D body
-    const body=document.createElement('div');
-    body.className='det-body';
-    body.style.cssText=`background:rgba(${col},.12);border:1px solid rgba(${col},.3)`;
-    el.appendChild(body);
-    // Tail lights for cars/trucks
-    if(o.type==='car'||o.type==='truck'||o.type==='bus'){
-      const lights=document.createElement('div');
-      lights.className='det-lights';
-      lights.innerHTML='<div class="det-light"></div><div class="det-light"></div>';
-      el.appendChild(lights);
-    }
-    // Distance
-    const lbl=document.createElement('span');
-    lbl.textContent=d+'m';
-    lbl.style.cssText=`font-size:${6+s*3}px;margin-top:1px`;
-    el.appendChild(lbl);
-    detsEl.appendChild(el);
-  });
+  if(objs) try{
+    const arr = typeof objs==='string' ? JSON.parse(objs) : objs;
+    arr.forEach(o=>{
+      const lx = o.x * 4;
+      const dz = -(1-o.y)*60 - 5;
+      dets.push(getDet(o.type, lx, dz));
+    });
+  }catch(e){}
 };
+
+// Animate
+const clk = new THREE.Clock();
+(function anim(){
+  requestAnimationFrame(anim);
+  const dt = clk.getDelta();
+  dOff += speed * dt * 0.15;
+  dG.children.forEach((d,i)=>{
+    d.position.z = ((-(Math.floor(i/3))*5 + dOff) % 200) - 100;
+    d.position.x = ((i%3)-1) * RW/4;
+  });
+  ctrl.update();
+  R.render(scene, camera);
+})();
+
+addEventListener('resize',()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  R.setSize(innerWidth, innerHeight);
+});
 </script>
 </body></html>
 ''';
@@ -236,7 +254,6 @@ window.updateDrive = function(spd, str, objs) {
         children: [
           WebViewWidget(controller: _wv),
           if (!_loaded) const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6))),
-
           // HUD
           Positioned(top: 12, left: 16, child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

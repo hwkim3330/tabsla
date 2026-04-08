@@ -69,20 +69,27 @@ class VehicleState extends ChangeNotifier {
   // Navigation route for sim to follow
   List<LatLng>? _navRoute;
   List<LatLng>? get navRoute => _navRoute;
+  double _navTotalDist = 0; // meters
+  double _navTotalDuration = 0; // seconds
+  double _navAvgSpeed = 50; // km/h calculated from route
 
-  void setNavRoute(List<LatLng> route) {
+  void setNavRoute(List<LatLng> route, {double totalDist = 0, double totalDuration = 0}) {
     if (route.length < 2) return;
     _navRoute = route;
-    // Always reset to start of new route
+    _navTotalDist = totalDist;
+    _navTotalDuration = totalDuration;
+    // Calculate average speed from route data
+    if (totalDuration > 0 && totalDist > 0) {
+      _navAvgSpeed = (totalDist / 1000) / (totalDuration / 3600); // km/h
+      _navAvgSpeed = _navAvgSpeed.clamp(20, 120);
+      _simTargetSpeed = _navAvgSpeed;
+    }
     _waypointIndex = 0;
     _segmentProgress = 0;
     _position = route.first;
     _trail.clear();
     _currentStreet = 'Following route';
-    // Auto-enable sim if parked
-    if (!_simMode) {
-      enableSimulation();
-    }
+    if (!_simMode) enableSimulation();
     notifyListeners();
   }
 

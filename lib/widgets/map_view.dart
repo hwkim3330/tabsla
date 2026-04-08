@@ -12,7 +12,7 @@ class MapView extends StatefulWidget {
   final String currentStreet;
   final double tripDistance;
   final List<LatLng> trail;
-  final ValueChanged<List<LatLng>>? onRouteSet;
+  final void Function(List<LatLng> polyline, double dist, double duration)? onRouteSet;
 
   const MapView({
     super.key,
@@ -98,7 +98,7 @@ class _MapViewState extends State<MapView> {
         _loadingRoute = false;
         _tappedDestination = null;
       });
-      widget.onRouteSet?.call(route.polyline);
+      widget.onRouteSet?.call(route.polyline, route.totalDistance, route.totalDuration);
     } else if (mounted) {
       setState(() { _loadingRoute = false; _tappedDestination = null; });
     }
@@ -130,7 +130,7 @@ class _MapViewState extends State<MapView> {
         _navigating = true;
         _currentStepIndex = 0;
       });
-      widget.onRouteSet?.call(route.polyline);
+      widget.onRouteSet?.call(route.polyline, route.totalDistance, route.totalDuration);
     }
   }
 

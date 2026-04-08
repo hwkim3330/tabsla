@@ -64,7 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     position: _v.position, heading: _v.heading, isMoving: !_v.isParked,
     speed: _v.speed, currentStreet: _v.currentStreet,
     tripDistance: _v.tripDistance, trail: _v.trail,
-    onRouteSet: (route) => _v.setNavRoute(route),
+    onRouteSet: (route, dist, dur) => _v.setNavRoute(route, totalDist: dist, totalDuration: dur),
   );
 
   Widget _sensorHud() => SensorHud(
