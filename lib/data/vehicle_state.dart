@@ -62,6 +62,19 @@ class VehicleState extends ChangeNotifier {
   List<DetectedObject> get detectedObjects => _detectedObjects;
   List<LatLng> get trail => _trail;
 
+  // Nav turn info
+  String _navInstruction = '';
+  double _navDistToTurn = 0;
+  double _navTotalRemaining = 0;
+  String get navInstruction => _navInstruction;
+  double get navDistToTurn => _navDistToTurn;
+  double get navTotalRemaining => _navTotalRemaining;
+
+  // Car model selection
+  String _carModel = 'lowpoly';
+  String get carModel => _carModel;
+  void setCarModel(String m) { _carModel = m; notifyListeners(); }
+
   Future<void> init() async {
     await _initGps();
   }
@@ -206,6 +219,25 @@ class VehicleState extends ChangeNotifier {
       if (diff > 180) diff -= 360;
       if (diff < -180) diff += 360;
       _steeringAngle = (diff * _segmentProgress).clamp(-25, 25);
+
+      // Nav instruction based on heading change
+      _navDistToTurn = _distBetween(_position, to) + _distBetween(to, next);
+      if (diff.abs() < 15) {
+        _navInstruction = 'straight';
+      } else if (diff > 0) {
+        _navInstruction = diff > 45 ? 'turn_right' : 'slight_right';
+      } else {
+        _navInstruction = diff < -45 ? 'turn_left' : 'slight_left';
+      }
+    } else {
+      _navInstruction = _navRoute != null ? 'arrive' : 'straight';
+      _navDistToTurn = 0;
+    }
+
+    // Total remaining distance
+    _navTotalRemaining = _distBetween(_position, to) * (1 - _segmentProgress);
+    for (int i = _waypointIndex + 1; i < route.length - 1; i++) {
+      _navTotalRemaining += _distBetween(route[i], route[i + 1]);
     }
 
     _trail.add(_position);
