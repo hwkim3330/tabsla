@@ -52,8 +52,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     speed: _v.speed, gear: _v.gear, steeringAngle: _v.steeringAngle,
     objects: _v.detectedObjects, animationValue: 0,
     batteryLevel: _v.batteryLevel, range: _v.range,
-    carModel: _v.carModel, navInstruction: _v.navInstruction,
-    navDistToTurn: _v.navDistToTurn, navTotalRemaining: _v.navTotalRemaining,
   );
 
   Widget _camera() => CameraSurroundView(
@@ -106,19 +104,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       // Sensor HUD
       Positioned(right: 6, top: 50, bottom: 60, child: _sensorHud()),
 
-      // Camera toggle + Car model selector
-      Positioned(bottom: 12, left: 12, child: Row(children: [
-        _SmallBtn(icon: _camMode ? Icons.view_in_ar_rounded : Icons.videocam_rounded,
-          onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); }),
-        const SizedBox(width: 6),
-        if (!_camMode) ...[
-          _ModelBtn('LP', 'lowpoly', _v.carModel, (m) { Haptics.tap(); _v.setCarModel(m); }),
-          const SizedBox(width: 4),
-          _ModelBtn('FR', 'ferrari', _v.carModel, (m) { Haptics.tap(); _v.setCarModel(m); }),
-          const SizedBox(width: 4),
-          _ModelBtn('LB', 'lambo', _v.carModel, (m) { Haptics.tap(); _v.setCarModel(m); }),
-        ],
-      ])),
+      // Camera toggle
+      Positioned(bottom: 12, left: 12, child: _SmallBtn(
+        icon: _camMode ? Icons.view_in_ar_rounded : Icons.videocam_rounded,
+        onTap: () { Haptics.tap(); setState(() => _camMode = !_camMode); })),
 
       // Sim speed
       if (_v.simMode && !_camMode)

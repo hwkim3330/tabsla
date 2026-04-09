@@ -5,8 +5,7 @@ import '../data/vehicle_state.dart';
 
 class SurroundView extends StatefulWidget {
   final double speed, steeringAngle, batteryLevel, range, animationValue;
-  final String gear, carModel, navInstruction;
-  final double navDistToTurn, navTotalRemaining;
+  final String gear;
   final List<DetectedObject> objects;
 
   const SurroundView({
@@ -14,8 +13,6 @@ class SurroundView extends StatefulWidget {
     required this.speed, required this.gear, required this.steeringAngle,
     required this.objects, required this.animationValue,
     required this.batteryLevel, required this.range,
-    required this.carModel, required this.navInstruction,
-    required this.navDistToTurn, required this.navTotalRemaining,
   });
 
   @override
@@ -23,15 +20,15 @@ class SurroundView extends StatefulWidget {
 }
 
 class _SurroundViewState extends State<SurroundView> {
-  late WebViewController _wv;
+  late final WebViewController _wv;
   bool _loaded = false;
-  String _currentModel = '';
 
-  static String _html(String modelUrl) => '''
+  // Three.js via ES modules (type="module") — works with loadHtmlString on Android
+  static const _html = r'''
 <!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<style>*{margin:0;padding:0}body{background:#141C28;overflow:hidden;touch-action:none}</style>
+<style>*{margin:0;padding:0}body{background:#121A24;overflow:hidden;touch-action:none}</style>
 </head><body>
 <script type="importmap">
 {"imports":{
@@ -45,17 +42,19 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x141C28);
-scene.fog = new THREE.FogExp2(0x141C28, 0.008);
+scene.background = new THREE.Color(0x121A24);
+scene.fog = new THREE.FogExp2(0x121A24, 0.010);
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
 camera.position.set(0, 5, 9);
+camera.lookAt(0, 0, -5);
 
 const R = new THREE.WebGLRenderer({antialias:true});
 R.setSize(innerWidth, innerHeight);
 R.setPixelRatio(Math.min(devicePixelRatio, 2));
+R.shadowMap.enabled = false;
 R.toneMapping = THREE.ACESFilmicToneMapping;
-R.toneMappingExposure = 2.0;
+R.toneMappingExposure = 1.8;
 document.body.appendChild(R.domElement);
 
 const ctrl = new OrbitControls(camera, R.domElement);
@@ -64,36 +63,38 @@ ctrl.target.set(0, 0.3, -2);
 ctrl.maxPolarAngle = Math.PI*0.42; ctrl.minPolarAngle = Math.PI*0.08;
 ctrl.minDistance = 4; ctrl.maxDistance = 16; ctrl.enablePan = false;
 
-// Bright lighting
-scene.add(new THREE.AmbientLight(0x8899bb, 1.5));
-const sun = new THREE.DirectionalLight(0xaabbdd, 1.2);
-sun.position.set(-3, 12, 8); scene.add(sun);
-scene.add(new THREE.DirectionalLight(0x556688, 0.6).translateX(5).translateY(6).translateZ(-5));
-scene.add(new THREE.HemisphereLight(0x8899cc, 0x1a2030, 0.5));
+// Lighting — brighter
+scene.add(new THREE.AmbientLight(0x5577aa, 1.2));
+const sun = new THREE.DirectionalLight(0x8899cc, 1.0);
+sun.position.set(-5, 15, 10);
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x445566, 0.5).translateX(5).translateY(8).translateZ(-5));
+// Extra fill from below
+scene.add(new THREE.HemisphereLight(0x6688aa, 0x1a2030, 0.4));
 
 // Headlights
 for(const x of [-0.5, 0.5]){
-  const hl = new THREE.SpotLight(0xffeedd, 2.5, 40, Math.PI*0.14, 0.5);
+  const hl = new THREE.SpotLight(0xffeedd, 2, 35, Math.PI*0.14, 0.5);
   hl.position.set(x, 0.5, -1.5);
-  const t = new THREE.Object3D(); t.position.set(x*2, 0, -20);
-  scene.add(t); hl.target = t; scene.add(hl);
+  const tgt = new THREE.Object3D(); tgt.position.set(x*2, 0, -20);
+  scene.add(tgt); hl.target = tgt; scene.add(hl);
 }
 
 // Ground
-scene.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(200,200),
-  new THREE.MeshStandardMaterial({color:0x162018, roughness:0.9})),
-  {rotation:{x:-Math.PI/2}, position:{y:-0.01}}));
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
+  new THREE.MeshStandardMaterial({color:0x101e12, roughness:0.9}));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; scene.add(gnd);
 
 // Road
 const RW=8, RL=200;
 const rd = new THREE.Mesh(new THREE.PlaneGeometry(RW, RL),
-  new THREE.MeshStandardMaterial({color:0x3a4250, roughness:0.75}));
+  new THREE.MeshStandardMaterial({color:0x333a46, roughness:0.8}));
 rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); scene.add(rd);
 
 // Edges
 for(const x of [-RW/2, RW/2]){
-  const e = new THREE.Mesh(new THREE.PlaneGeometry(0.15, RL),
-    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.4}));
+  const e = new THREE.Mesh(new THREE.PlaneGeometry(0.12, RL),
+    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.35}));
   e.rotation.x=-Math.PI/2; e.position.set(x, 0.01, -RL/2+10); scene.add(e);
 }
 
@@ -101,195 +102,154 @@ for(const x of [-RW/2, RW/2]){
 const dG = new THREE.Group();
 for(let l=-1;l<=1;l++) for(let i=0;i<40;i++){
   const d = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 2),
-    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.25}));
+    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.2}));
   d.rotation.x=-Math.PI/2; d.position.set(l*RW/4, 0.01, -i*5); dG.add(d);
 }
 scene.add(dG);
 
-// Blue AP path
-const bp = new THREE.Mesh(new THREE.PlaneGeometry(1.8, RL),
-  new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.07}));
+// Blue path
+const bp = new THREE.Mesh(new THREE.PlaneGeometry(1.5, RL),
+  new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.06}));
 bp.rotation.x=-Math.PI/2; bp.position.set(0, 0.007, -RL/2+10); scene.add(bp);
+
+// No buildings — performance optimization
 
 // Ego car
 let ego = null;
-const loader = new GLTFLoader();
-loader.load('$modelUrl', g=>{
+new GLTFLoader().load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb', g=>{
   ego = g.scene; ego.scale.set(1.2, 1.2, 1.2);
   ego.position.set(0, 0.05, 0); ego.rotation.y = Math.PI;
-  ego.traverse(c=>{if(c.isMesh){c.material=c.material.clone(); c.material.envMapIntensity=1.5}});
+  ego.traverse(c=>{if(c.isMesh){c.castShadow=true; c.receiveShadow=true}});
   scene.add(ego);
 });
 
-// Detected — clone from template
-let carTpl = null;
-loader.load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb', g=>{
-  carTpl = g.scene; carTpl.scale.set(1.0, 1.0, 1.0); carTpl.rotation.y = Math.PI;
+// Detected vehicles — use cloned GLB models with color tint
+const detColors = {car:0x3B82F6, truck:0xFBBF24, bus:0xFBBF24, pedestrian:0xF87171, bike:0x34D399};
+let carTemplate = null;
+
+// Preload car template for cloning
+new GLTFLoader().load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb', g=>{
+  carTemplate = g.scene;
+  carTemplate.scale.set(1.1, 1.1, 1.1);
+  carTemplate.rotation.y = Math.PI;
 });
 
-const dets = [];
-function mkDet(type, x, z){
+function getDet(type, x, z){
+  const col = new THREE.Color(detColors[type]||0x888888);
   let m;
-  if(carTpl && (type==='car'||type==='truck')){
-    m = carTpl.clone();
-    const s = type==='truck' ? 1.3 : 1.0;
-    m.scale.set(s, type==='truck'?1.2:1, s);
-    const colors = {car:0x6688AA, truck:0x889AAA};
-    m.traverse(c=>{if(c.isMesh){
-      c.material = c.material.clone();
-      c.material.color.set(colors[type]||0x888888);
-      c.material.opacity = 0.8; c.material.transparent = true;
-    }});
-  } else {
-    const col = type==='pedestrian'?0xCC9977:0x77AA88;
-    const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.7});
+
+  if((type==='car'||type==='truck'||type==='bus') && carTemplate){
+    m = carTemplate.clone();
+    const scale = type==='truck'||type==='bus' ? 1.4 : 1.0;
+    m.scale.set(1.1*scale, 1.1*(type==='truck'?1.3:1), 1.1*scale);
+    // Tint all meshes
+    m.traverse(c=>{
+      if(c.isMesh){
+        c.material = c.material.clone();
+        c.material.color.copy(col);
+        c.material.transparent = true;
+        c.material.opacity = 0.55;
+        c.castShadow = true;
+      }
+    });
+  } else if(type==='pedestrian'){
+    const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.5});
     m = new THREE.Group();
-    if(type==='pedestrian'){
-      m.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.7),mat),{position:new THREE.Vector3(0,0.9,0)}));
-      m.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.13),mat),{position:new THREE.Vector3(0,1.4,0)}));
-    } else {
-      m.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.4,1,1.3),mat),{position:new THREE.Vector3(0,0.5,0)}));
-    }
+    m.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.7), mat).translateY(0.9));
+    m.add(new THREE.Mesh(new THREE.SphereGeometry(0.13), mat).translateY(1.4));
+  } else if(type==='bike'){
+    const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.5});
+    m = new THREE.Group();
+    m.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.9), mat).translateY(0.8));
+    m.add(new THREE.Mesh(new THREE.SphereGeometry(0.12), mat).translateY(1.4));
+    m.add(new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.04, 8, 12), mat).translateY(0.25).rotateX(Math.PI/2));
+  } else {
+    // Fallback box
+    const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.5});
+    m = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 3), mat);
+    m.position.y = 0.5;
   }
-  m.position.set(x, 0, z); scene.add(m); return m;
+
+  m.position.set(x, 0, z);
+  scene.add(m);
+  return m;
 }
 
 let speed=0, dOff=0;
+const dets = [];
+
 window.updateDrive = function(spd, str, objs){
   speed = spd;
   if(ego) ego.rotation.y = Math.PI + THREE.MathUtils.degToRad(str * -0.5);
-  dets.forEach(d=>scene.remove(d)); dets.length=0;
+
+  // Remove old detected
+  dets.forEach(d => {d.traverse(c=>{if(c.geometry)c.geometry.dispose()}); scene.remove(d)});
+  dets.length = 0;
+
   if(objs) try{
-    (typeof objs==='string'?JSON.parse(objs):objs).forEach(o=>{
-      dets.push(mkDet(o.type, o.x*4, -(1-o.y)*60-5));
+    const arr = typeof objs==='string' ? JSON.parse(objs) : objs;
+    arr.forEach(o=>{
+      const lx = o.x * 4;
+      const dz = -(1-o.y)*60 - 5;
+      dets.push(getDet(o.type, lx, dz));
     });
   }catch(e){}
 };
 
-window.changeModel = function(url){
-  if(ego){scene.remove(ego); ego=null}
-  loader.load(url, g=>{
-    ego = g.scene; ego.scale.set(1.2, 1.2, 1.2);
-    ego.position.set(0, 0.05, 0); ego.rotation.y = Math.PI;
-    ego.traverse(c=>{if(c.isMesh){c.material=c.material.clone();c.material.envMapIntensity=1.5}});
-    scene.add(ego);
-  });
-};
-
+// Animate
 const clk = new THREE.Clock();
 (function anim(){
   requestAnimationFrame(anim);
   const dt = clk.getDelta();
-  dOff += speed*dt*0.15;
+  dOff += speed * dt * 0.15;
   dG.children.forEach((d,i)=>{
-    d.position.z=((-(Math.floor(i/3))*5+dOff)%200)-100;
-    d.position.x=((i%3)-1)*RW/4;
+    d.position.z = ((-(Math.floor(i/3))*5 + dOff) % 200) - 100;
+    d.position.x = ((i%3)-1) * RW/4;
   });
-  ctrl.update(); R.render(scene, camera);
+  ctrl.update();
+  R.render(scene, camera);
 })();
 
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();R.setSize(innerWidth,innerHeight)});
+addEventListener('resize',()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  R.setSize(innerWidth, innerHeight);
+});
 </script>
 </body></html>
 ''';
 
-  static const _models = {
-    'lowpoly': 'https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb',
-    'ferrari': 'https://hwkim3330.github.io/tabsla/models/ferrari.glb',
-    'lambo': 'https://hwkim3330.github.io/tabsla/models/lambo.glb',
-  };
-
-  void _initWv(String model) {
-    _currentModel = model;
-    _loaded = false;
-    _wv = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF141C28))
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) { if (mounted) setState(() => _loaded = true); },
-      ))
-      ..loadHtmlString(_html(_models[model] ?? _models['lowpoly']!));
-  }
-
   @override
   void initState() {
     super.initState();
-    _initWv(widget.carModel);
+    _wv = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF121A24))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) => setState(() => _loaded = true),
+      ))
+      ..loadHtmlString(_html);
   }
 
   @override
   void didUpdateWidget(SurroundView old) {
     super.didUpdateWidget(old);
-    // Model changed
-    if (widget.carModel != _currentModel && _loaded) {
-      final url = _models[widget.carModel];
-      if (url != null) {
-        _wv.runJavaScript("changeModel('$url')");
-        _currentModel = widget.carModel;
-      }
-    }
-    // Update drive data
     if (_loaded) {
       final objs = widget.objects.map((o) => {'x': o.x, 'y': o.y, 'type': o.type}).toList();
       _wv.runJavaScript("updateDrive(${widget.speed.toStringAsFixed(1)},${widget.steeringAngle.toStringAsFixed(1)},${jsonEncode(objs)})");
     }
   }
 
-  IconData _navIcon(String inst) {
-    switch (inst) {
-      case 'turn_left': return Icons.turn_left_rounded;
-      case 'turn_right': return Icons.turn_right_rounded;
-      case 'slight_left': return Icons.turn_slight_left_rounded;
-      case 'slight_right': return Icons.turn_slight_right_rounded;
-      case 'arrive': return Icons.flag_rounded;
-      default: return Icons.arrow_upward_rounded;
-    }
-  }
-
-  String _distStr(double m) => m > 1000 ? '${(m/1000).toStringAsFixed(1)}km' : '${m.toInt()}m';
-
   @override
   Widget build(BuildContext context) {
-    final hasNav = widget.navInstruction.isNotEmpty && widget.navInstruction != 'straight';
-    final eta = widget.speed > 3 ? (widget.navTotalRemaining / (widget.speed / 3.6)).round() : 0;
-    final etaMin = (eta / 60).round();
-
     return Container(
-      color: const Color(0xFF141C28),
+      color: const Color(0xFF121A24),
       child: Stack(
         children: [
           WebViewWidget(controller: _wv),
           if (!_loaded) const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6))),
-
-          // === Nav turn instruction (top center) ===
-          if (hasNav || widget.navTotalRemaining > 10)
-            Positioned(top: 10, left: 0, right: 0, child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(8)),
-                    child: Icon(_navIcon(widget.navInstruction), color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Text(_distStr(widget.navDistToTurn),
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, height: 1)),
-                    if (widget.navTotalRemaining > 100)
-                      Text('${_distStr(widget.navTotalRemaining)} · ${etaMin > 0 ? "${etaMin}min" : "<1min"}',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10)),
-                  ]),
-                ]),
-              ),
-            )),
-
-          // === Gear + Speed (top left, Tesla style) ===
-          Positioned(top: hasNav ? 60 : 12, left: 16, child: Column(
+          // HUD
+          Positioned(top: 12, left: 16, child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: ['P','R','N','D'].map((g) {
@@ -297,15 +257,15 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
                 return Container(width: 24, height: 24, margin: const EdgeInsets.only(right: 2),
                   decoration: BoxDecoration(color: on ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(5)),
                   child: Center(child: Text(g, style: TextStyle(
-                    color: on ? const Color(0xFF141C28) : Colors.white.withValues(alpha: 0.12),
+                    color: on ? const Color(0xFF121A24) : Colors.white.withValues(alpha: 0.12),
                     fontSize: 12, fontWeight: on ? FontWeight.w800 : FontWeight.w400, height: 1))));
               }).toList()),
               const SizedBox(height: 8),
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(widget.speed.toInt().toString(), style: const TextStyle(
-                  color: Colors.white, fontSize: 52, fontWeight: FontWeight.w200, height: 1, letterSpacing: -3,
+                  color: Colors.white, fontSize: 56, fontWeight: FontWeight.w200, height: 1, letterSpacing: -3,
                   shadows: [Shadow(color: Colors.black87, blurRadius: 8)])),
-                Padding(padding: const EdgeInsets.only(bottom: 5, left: 5),
+                Padding(padding: const EdgeInsets.only(bottom: 6, left: 5),
                   child: Text('km/h', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 13))),
               ]),
               if (widget.speed > 0) ...[const SizedBox(height: 8),
@@ -316,9 +276,7 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
               ],
             ],
           )),
-
-          // === Battery (top right) ===
-          Positioned(top: hasNav ? 60 : 12, right: 14, child: Column(
+          Positioned(top: 12, right: 14, child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Row(children: [
