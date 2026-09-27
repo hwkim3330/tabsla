@@ -1,17 +1,27 @@
-# tesla_dashboard
+# Tabsla — Tesla-style tablet car dashboard
 
-A new Flutter project.
+**3D viewer (web):** https://hwkim3330.github.io/tabsla/ · **Drive view:** https://hwkim3330.github.io/tabsla/drive.html
 
-## Getting Started
+A Flutter app that turns an Android tablet into a Tesla-style in-car display. It uses the tablet's own sensors, GPS and cameras, plus free web services, so it runs without a car connection.
 
-This project is a starting point for a Flutter application.
+## Features (widgets in `lib/widgets/`)
 
-A few resources to get you started if this is your first Flutter project:
+- **Map & navigation** — `flutter_map` + OpenStreetMap, routing through the public OSRM server.
+- **3D vehicle viewer** — GLB car models (`model_viewer_plus`, `flutter_3d_controller`, and the WebView pages in `docs/`).
+- **Speedometer, power meter, energy graph, trip info, battery gauge.**
+- **Sensor HUD** — accelerometer/gyro (`sensors_plus`), device temperature, noise level (`noise_meter`).
+- **Camera surround view and dashcam** (`camera`).
+- **Weather** from Open-Meteo; climate, vehicle controls, media player, sketchpad, mini game, settings.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Run
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run            # Android tablet recommended (camera, GPS, sensors)
+```
+
+`docs/` holds the static 3D viewer pages and GLB models published on GitHub Pages.
+
+**Tech:** Flutter / Dart, flutter_map, geolocator, sensors_plus, camera, webview_flutter, model-viewer, Three.js.
+
+**Status:** personal prototype.
