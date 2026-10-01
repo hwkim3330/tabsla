@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,7 +11,8 @@ class MapView extends StatefulWidget {
   final String currentStreet;
   final double tripDistance;
   final List<LatLng> trail;
-  final void Function(List<LatLng> polyline, double dist, double duration)? onRouteSet;
+  final void Function(List<LatLng> polyline, double dist, double duration)?
+  onRouteSet;
 
   const MapView({
     super.key,
@@ -80,7 +80,11 @@ class _MapViewState extends State<MapView> {
     if (_currentStepIndex >= steps.length - 1) return;
 
     final nextStep = steps[_currentStepIndex + 1];
-    final dist = const Distance().as(LengthUnit.Meter, widget.position, nextStep.location);
+    final dist = const Distance().as(
+      LengthUnit.Meter,
+      widget.position,
+      nextStep.location,
+    );
     if (dist < 30) {
       setState(() => _currentStepIndex++);
       if (_currentStepIndex >= steps.length - 1) {
@@ -94,7 +98,10 @@ class _MapViewState extends State<MapView> {
   }
 
   Future<void> _navigateToPoint(LatLng dest) async {
-    setState(() { _loadingRoute = true; _tappedDestination = dest; });
+    setState(() {
+      _loadingRoute = true;
+      _tappedDestination = dest;
+    });
     final route = await NavigationService.getRoute(widget.position, dest);
     if (route != null && mounted) {
       setState(() {
@@ -104,9 +111,16 @@ class _MapViewState extends State<MapView> {
         _loadingRoute = false;
         _tappedDestination = null;
       });
-      widget.onRouteSet?.call(route.polyline, route.totalDistance, route.totalDuration);
+      widget.onRouteSet?.call(
+        route.polyline,
+        route.totalDistance,
+        route.totalDuration,
+      );
     } else if (mounted) {
-      setState(() { _loadingRoute = false; _tappedDestination = null; });
+      setState(() {
+        _loadingRoute = false;
+        _tappedDestination = null;
+      });
     }
   }
 
@@ -129,14 +143,21 @@ class _MapViewState extends State<MapView> {
       _searchController.clear();
     });
 
-    final route = await NavigationService.getRoute(widget.position, dest.location);
+    final route = await NavigationService.getRoute(
+      widget.position,
+      dest.location,
+    );
     if (route != null && mounted) {
       setState(() {
         _activeRoute = route;
         _navigating = true;
         _currentStepIndex = 0;
       });
-      widget.onRouteSet?.call(route.polyline, route.totalDistance, route.totalDuration);
+      widget.onRouteSet?.call(
+        route.polyline,
+        route.totalDistance,
+        route.totalDuration,
+      );
     }
   }
 
@@ -174,7 +195,8 @@ class _MapViewState extends State<MapView> {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+              urlTemplate:
+                  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
               subdomains: const ['a', 'b', 'c', 'd'],
               userAgentPackageName: 'com.dashboard.tesla_dashboard',
               maxZoom: 20,
@@ -216,10 +238,20 @@ class _MapViewState extends State<MapView> {
                         color: const Color(0xFF3B82F6),
                         border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
-                          BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.4), blurRadius: 12, spreadRadius: 3),
+                          BoxShadow(
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.4),
+                            blurRadius: 12,
+                            spreadRadius: 3,
+                          ),
                         ],
                       ),
-                      child: const Icon(Icons.navigation, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.navigation,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -229,7 +261,11 @@ class _MapViewState extends State<MapView> {
                     point: _activeRoute!.polyline.last,
                     width: 36,
                     height: 36,
-                    child: const Icon(Icons.location_on, color: Color(0xFFEF4444), size: 36),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFFEF4444),
+                      size: 36,
+                    ),
                   ),
                 // Tapped destination marker
                 if (_tappedDestination != null && !_navigating)
@@ -237,7 +273,11 @@ class _MapViewState extends State<MapView> {
                     point: _tappedDestination!,
                     width: 36,
                     height: 36,
-                    child: const Icon(Icons.location_on, color: Color(0xFFEF4444), size: 36),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFFEF4444),
+                      size: 36,
+                    ),
                   ),
               ],
             ),
@@ -251,26 +291,39 @@ class _MapViewState extends State<MapView> {
           _buildDefaultTopBar(),
 
         // Search overlay
-        if (_showSearch)
-          _buildSearchOverlay(),
+        if (_showSearch) _buildSearchOverlay(),
 
         // Tapped destination confirmation
         if (_tappedDestination != null && !_navigating && !_showSearch)
           Positioned(
-            bottom: 60, left: 10, right: 10,
+            bottom: 60,
+            left: 10,
+            right: 10,
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 12)],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: const Color(0xFFEF4444).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.location_on, color: Color(0xFFEF4444), size: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFFEF4444),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -278,10 +331,20 @@ class _MapViewState extends State<MapView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Navigate here?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
+                        const Text(
+                          'Navigate here?',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
                         Text(
                           '${_tappedDestination!.latitude.toStringAsFixed(5)}, ${_tappedDestination!.longitude.toStringAsFixed(5)}',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
+                          ),
                         ),
                       ],
                     ),
@@ -295,20 +358,43 @@ class _MapViewState extends State<MapView> {
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.close, size: 18, color: Color(0xFF6B7280)),
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
                   ),
                   GestureDetector(
-                    onTap: _loadingRoute ? null : () => _navigateToPoint(_tappedDestination!),
+                    onTap: _loadingRoute
+                        ? null
+                        : () => _navigateToPoint(_tappedDestination!),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF3B82F6),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: _loadingRoute
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Go', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Go',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -318,25 +404,6 @@ class _MapViewState extends State<MapView> {
 
         // Bottom info
         _buildBottomBar(),
-
-        // Search button (when not searching and not navigating)
-        if (!_showSearch && !_navigating)
-          Positioned(
-            top: 60,
-            right: 10,
-            child: GestureDetector(
-              onTap: () => setState(() => _showSearch = true),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
-                ),
-                child: const Icon(Icons.search, color: Color(0xFF3B82F6), size: 22),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -348,7 +415,11 @@ class _MapViewState extends State<MapView> {
         : null;
 
     final distToNext = nextStep != null
-        ? const Distance().as(LengthUnit.Meter, widget.position, nextStep.location)
+        ? const Distance().as(
+            LengthUnit.Meter,
+            widget.position,
+            nextStep.location,
+          )
         : 0.0;
 
     final remainingDist = _activeRoute!.totalDistance;
@@ -356,16 +427,25 @@ class _MapViewState extends State<MapView> {
         ? (remainingDist / (widget.speed / 3.6)).round()
         : 0;
     final etaTime = DateTime.now().add(Duration(seconds: eta));
-    final etaStr = '${etaTime.hour.toString().padLeft(2, '0')}:${etaTime.minute.toString().padLeft(2, '0')}';
+    final etaStr =
+        '${etaTime.hour.toString().padLeft(2, '0')}:${etaTime.minute.toString().padLeft(2, '0')}';
 
     return Positioned(
-      top: 10, left: 10, right: 10,
+      top: 10,
+      left: 10,
+      right: 10,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -374,8 +454,15 @@ class _MapViewState extends State<MapView> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(_getManeuverIcon(nextStep?.maneuver ?? step.maneuver), color: Colors.white, size: 22),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _getManeuverIcon(nextStep?.maneuver ?? step.maneuver),
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -386,11 +473,20 @@ class _MapViewState extends State<MapView> {
                         distToNext > 1000
                             ? '${(distToNext / 1000).toStringAsFixed(1)} km'
                             : '${distToNext.toInt()} m',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111827),
+                        ),
                       ),
                       Text(
-                        step.instruction.isNotEmpty ? step.instruction : 'Continue straight',
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                        step.instruction.isNotEmpty
+                            ? step.instruction
+                            : 'Continue straight',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -399,12 +495,22 @@ class _MapViewState extends State<MapView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(etaStr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF3B82F6))),
+                    Text(
+                      etaStr,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF3B82F6),
+                      ),
+                    ),
                     Text(
                       remainingDist > 1000
                           ? '${(remainingDist / 1000).toStringAsFixed(1)} km'
                           : '${remainingDist.toInt()} m',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9CA3AF),
+                      ),
                     ),
                   ],
                 ),
@@ -417,7 +523,11 @@ class _MapViewState extends State<MapView> {
                       color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, color: Color(0xFFEF4444), size: 16),
+                    child: const Icon(
+                      Icons.close,
+                      color: Color(0xFFEF4444),
+                      size: 16,
+                    ),
                   ),
                 ),
               ],
@@ -430,35 +540,78 @@ class _MapViewState extends State<MapView> {
 
   Widget _buildDefaultTopBar() {
     return Positioned(
-      top: 10, left: 10, right: 10,
+      top: 12,
+      left: 12,
+      right: 64,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 2))],
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.navigation, color: Colors.white, size: 18),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2F80ED),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.navigation_rounded,
+                color: Colors.white,
+                size: 19,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.currentStreet.isNotEmpty ? widget.currentStreet : 'GPS Active',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF111827)),
+                    widget.currentStreet.isNotEmpty
+                        ? widget.currentStreet
+                        : 'Navigate',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF161A20),
+                    ),
                   ),
                   Text(
                     '${widget.position.latitude.toStringAsFixed(5)}, ${widget.position.longitude.toStringAsFixed(5)}',
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF9AA1AA),
+                    ),
                   ),
                 ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _showSearch = true),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F2F5),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFF2F80ED),
+                  size: 20,
+                ),
               ),
             ),
           ],
@@ -469,7 +622,10 @@ class _MapViewState extends State<MapView> {
 
   Widget _buildSearchOverlay() {
     return Positioned(
-      top: 0, left: 0, right: 0, bottom: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       child: Container(
         color: Colors.white,
         child: SafeArea(
@@ -481,8 +637,14 @@ class _MapViewState extends State<MapView> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => setState(() { _showSearch = false; _searchResults = []; }),
-                      child: const Icon(Icons.arrow_back, color: Color(0xFF374151)),
+                      onTap: () => setState(() {
+                        _showSearch = false;
+                        _searchResults = [];
+                      }),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF374151),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -498,15 +660,28 @@ class _MapViewState extends State<MapView> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           suffixIcon: _searching
                               ? const Padding(
                                   padding: EdgeInsets.all(12),
-                                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
                                 )
                               : IconButton(
-                                  icon: const Icon(Icons.search, color: Color(0xFF3B82F6)),
-                                  onPressed: () => _search(_searchController.text),
+                                  icon: const Icon(
+                                    Icons.search,
+                                    color: Color(0xFF3B82F6),
+                                  ),
+                                  onPressed: () =>
+                                      _search(_searchController.text),
                                 ),
                         ),
                         onSubmitted: _search,
@@ -522,11 +697,18 @@ class _MapViewState extends State<MapView> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.search, size: 48, color: Colors.grey.shade300),
+                            Icon(
+                              Icons.search,
+                              size: 48,
+                              color: Colors.grey.shade300,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'Search for a place',
-                              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                              style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
@@ -539,24 +721,49 @@ class _MapViewState extends State<MapView> {
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                color: const Color(
+                                  0xFF3B82F6,
+                                ).withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Color(0xFF3B82F6),
+                                size: 20,
+                              ),
                             ),
-                            title: Text(result.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            title: Text(
+                              result.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             subtitle: Text(
                               result.displayName,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
-                              maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             trailing: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF3B82F6),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text('Go', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                              child: const Text(
+                                'Go',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                             onTap: () => _startNavigation(result),
                           );
@@ -572,20 +779,30 @@ class _MapViewState extends State<MapView> {
 
   Widget _buildBottomBar() {
     return Positioned(
-      bottom: 10, left: 10, right: 10,
+      bottom: 10,
+      left: 10,
+      right: 10,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _InfoItem(label: 'Speed', value: '${widget.speed.toInt()} km/h'),
             Container(width: 1, height: 24, color: const Color(0xFFE5E7EB)),
-            _InfoItem(label: 'Trip', value: '${widget.tripDistance.toStringAsFixed(1)} km'),
+            _InfoItem(
+              label: 'Trip',
+              value: '${widget.tripDistance.toStringAsFixed(1)} km',
+            ),
             Container(width: 1, height: 24, color: const Color(0xFFE5E7EB)),
             _InfoItem(label: 'Heading', value: '${widget.heading.toInt()}°'),
           ],
@@ -611,8 +828,18 @@ class _InfoItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
-        Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF))),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF)),
+        ),
       ],
     );
   }

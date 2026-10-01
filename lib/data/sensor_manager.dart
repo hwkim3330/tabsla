@@ -9,7 +9,10 @@ import 'package:latlong2/latlong.dart';
 import 'weather_service.dart';
 
 class SensorManager extends ChangeNotifier {
-  static const _batteryChannel = MethodChannel('com.dashboard.tesla_dashboard/battery');
+  static const _batteryChannel = MethodChannel(
+    'com.dashboard.tesla_dashboard/battery',
+  );
+  static const _enableMicNoiseMeter = false;
 
   // Accelerometer
   double _lateralG = 0;
@@ -62,10 +65,15 @@ class SensorManager extends ChangeNotifier {
     _initAccel();
     _initGyro();
     _initCompass();
-    await _initMic();
+    if (_enableMicNoiseMeter) {
+      await _initMic();
+    }
     _startBatteryTempPolling();
     _fetchWeather(position);
-    _weatherTimer = Timer.periodic(const Duration(minutes: 10), (_) => _fetchWeather(position));
+    _weatherTimer = Timer.periodic(
+      const Duration(minutes: 10),
+      (_) => _fetchWeather(position),
+    );
   }
 
   void updatePosition(LatLng pos) {
@@ -73,36 +81,39 @@ class SensorManager extends ChangeNotifier {
   }
 
   void _initAccel() {
-    _accelSub = accelerometerEventStream(
-      samplingPeriod: const Duration(milliseconds: 50),
-    ).listen((e) {
-      _lateralG = e.x / 9.81;
-      _longitudinalG = e.y / 9.81 - 1.0;
-      _totalG = sqrt(e.x * e.x + e.y * e.y + e.z * e.z) / 9.81;
-      notifyListeners();
-    });
+    _accelSub =
+        accelerometerEventStream(
+          samplingPeriod: const Duration(milliseconds: 50),
+        ).listen((e) {
+          _lateralG = e.x / 9.81;
+          _longitudinalG = e.y / 9.81 - 1.0;
+          _totalG = sqrt(e.x * e.x + e.y * e.y + e.z * e.z) / 9.81;
+          notifyListeners();
+        });
   }
 
   void _initGyro() {
-    _gyroSub = gyroscopeEventStream(
-      samplingPeriod: const Duration(milliseconds: 50),
-    ).listen((e) {
-      _pitch += e.x * 0.05;
-      _roll += e.y * 0.05;
-      _pitch *= 0.95;
-      _roll *= 0.95;
-      notifyListeners();
-    });
+    _gyroSub =
+        gyroscopeEventStream(
+          samplingPeriod: const Duration(milliseconds: 50),
+        ).listen((e) {
+          _pitch += e.x * 0.05;
+          _roll += e.y * 0.05;
+          _pitch *= 0.95;
+          _roll *= 0.95;
+          notifyListeners();
+        });
   }
 
   void _initCompass() {
-    _magnetSub = magnetometerEventStream(
-      samplingPeriod: const Duration(milliseconds: 100),
-    ).listen((e) {
-      _compassHeading = atan2(e.y, e.x) * 180 / pi;
-      if (_compassHeading < 0) _compassHeading += 360;
-      notifyListeners();
-    });
+    _magnetSub =
+        magnetometerEventStream(
+          samplingPeriod: const Duration(milliseconds: 100),
+        ).listen((e) {
+          _compassHeading = atan2(e.y, e.x) * 180 / pi;
+          if (_compassHeading < 0) _compassHeading += 360;
+          notifyListeners();
+        });
   }
 
   Future<void> _initMic() async {
@@ -119,12 +130,17 @@ class SensorManager extends ChangeNotifier {
 
   void _startBatteryTempPolling() {
     _fetchBatteryTemp();
-    _tempTimer = Timer.periodic(const Duration(seconds: 5), (_) => _fetchBatteryTemp());
+    _tempTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _fetchBatteryTemp(),
+    );
   }
 
   Future<void> _fetchBatteryTemp() async {
     try {
-      final temp = await _batteryChannel.invokeMethod<double>('getBatteryTemperature');
+      final temp = await _batteryChannel.invokeMethod<double>(
+        'getBatteryTemperature',
+      );
       if (temp != null) {
         _batteryTemp = temp;
         notifyListeners();

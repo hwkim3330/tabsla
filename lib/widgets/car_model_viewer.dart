@@ -131,7 +131,11 @@ function resetColor(){
     if (tab == _tab) return;
     Haptics.tap();
     setState(() => _tab = tab);
-    if (tab == 0) _loadCar(); else _loadSeats();
+    if (tab == 0) {
+      _loadCar();
+    } else {
+      _loadSeats();
+    }
   }
 
   void _selectCar(int idx) {
@@ -173,7 +177,7 @@ function resetColor(){
                   child: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(7)),
-                    child: const Icon(Icons.close_rounded, size: 17, color: Color(0xFF666)),
+                    child: const Icon(Icons.close_rounded, size: 17, color: Color(0xFF666666)),
                   ),
                 ),
               ],
@@ -200,7 +204,7 @@ function resetColor(){
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Center(child: Text(_cars[i].name, style: TextStyle(
-                        color: _carIdx == i ? Colors.white : const Color(0xFF888),
+                        color: _carIdx == i ? Colors.white : const Color(0xFF888888),
                         fontSize: 11, fontWeight: FontWeight.w600))),
                     ),
                   ),
@@ -229,7 +233,7 @@ function resetColor(){
                   // Color dots
                   Row(
                     children: [
-                      const Text('Color', style: TextStyle(fontSize: 10, color: Color(0xFF999), fontWeight: FontWeight.w600)),
+                      const Text('Color', style: TextStyle(fontSize: 10, color: Color(0xFF999999), fontWeight: FontWeight.w600)),
                       const SizedBox(width: 10),
                       ...List.generate(_colors.length, (i) {
                         Color dotColor;
@@ -248,7 +252,7 @@ function resetColor(){
                               color: dotColor,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: _colorIdx == i ? const Color(0xFF3B82F6) : const Color(0xFFDDD),
+                                color: _colorIdx == i ? const Color(0xFF3B82F6) : const Color(0xFFDDDDDD),
                                 width: _colorIdx == i ? 2.5 : 1),
                             ),
                           ),
@@ -299,7 +303,7 @@ class _TabBtn extends StatelessWidget {
       decoration: BoxDecoration(
         color: active ? const Color(0xFF3B82F6) : const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(8)),
-      child: Text(label, style: TextStyle(color: active ? Colors.white : const Color(0xFF666), fontSize: 12, fontWeight: FontWeight.w600)),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : const Color(0xFF666666), fontSize: 12, fontWeight: FontWeight.w600)),
     ),
   );
 }

@@ -207,7 +207,7 @@ class _Toggle extends StatelessWidget {
           Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF111827))),
           Text(subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
         ])),
-        Switch(value: value, onChanged: onChanged, activeColor: activeColor,
+        Switch(value: value, onChanged: onChanged, activeThumbColor: activeColor,
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       ],
     ),

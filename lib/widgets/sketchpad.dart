@@ -105,7 +105,9 @@ class _SketchPainter extends CustomPainter {
       if (line.points.length < 2) continue;
       final paint = Paint()..color = line.color..strokeWidth = line.width..strokeCap = StrokeCap.round..style = PaintingStyle.stroke;
       final path = Path()..moveTo(line.points.first.dx, line.points.first.dy);
-      for (int i = 1; i < line.points.length; i++) path.lineTo(line.points[i].dx, line.points[i].dy);
+      for (int i = 1; i < line.points.length; i++) {
+        path.lineTo(line.points[i].dx, line.points[i].dy);
+      }
       canvas.drawPath(path, paint);
     }
   }

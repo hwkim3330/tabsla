@@ -10,9 +10,13 @@ class SurroundView extends StatefulWidget {
 
   const SurroundView({
     super.key,
-    required this.speed, required this.gear, required this.steeringAngle,
-    required this.objects, required this.animationValue,
-    required this.batteryLevel, required this.range,
+    required this.speed,
+    required this.gear,
+    required this.steeringAngle,
+    required this.objects,
+    required this.animationValue,
+    required this.batteryLevel,
+    required this.range,
   });
 
   @override
@@ -28,7 +32,7 @@ class _SurroundViewState extends State<SurroundView> {
 <!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<style>*{margin:0;padding:0}body{background:#121A24;overflow:hidden;touch-action:none}</style>
+<style>*{margin:0;padding:0}body{background:#E8EBEF;overflow:hidden;touch-action:none}</style>
 </head><body>
 <script type="importmap">
 {"imports":{
@@ -42,39 +46,49 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x121A24);
-scene.fog = new THREE.FogExp2(0x121A24, 0.010);
+scene.background = new THREE.Color(0xE8EBEF);
+scene.fog = new THREE.FogExp2(0xE8EBEF, 0.0055);
 
-const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
-camera.position.set(0, 5, 9);
-camera.lookAt(0, 0, -5);
+const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 5.2, 8.2);
+camera.lookAt(0, 0.25, -4.2);
 
 const R = new THREE.WebGLRenderer({antialias:true});
 R.setSize(innerWidth, innerHeight);
 R.setPixelRatio(Math.min(devicePixelRatio, 2));
-R.shadowMap.enabled = false;
+R.shadowMap.enabled = true;
+R.shadowMap.type = THREE.PCFSoftShadowMap;
 R.toneMapping = THREE.ACESFilmicToneMapping;
-R.toneMappingExposure = 1.8;
+R.toneMappingExposure = 1.2;
 document.body.appendChild(R.domElement);
 
 const ctrl = new OrbitControls(camera, R.domElement);
 ctrl.enableDamping = true; ctrl.dampingFactor = 0.05;
-ctrl.target.set(0, 0.3, -2);
+ctrl.target.set(0, 0.45, -2.2);
 ctrl.maxPolarAngle = Math.PI*0.42; ctrl.minPolarAngle = Math.PI*0.08;
 ctrl.minDistance = 4; ctrl.maxDistance = 16; ctrl.enablePan = false;
 
-// Lighting — brighter
-scene.add(new THREE.AmbientLight(0x5577aa, 1.2));
-const sun = new THREE.DirectionalLight(0x8899cc, 1.0);
-sun.position.set(-5, 15, 10);
+// Soft studio lighting, closer to the bright Tesla visualization panel.
+scene.add(new THREE.AmbientLight(0xffffff, 1.05));
+scene.add(new THREE.HemisphereLight(0xffffff, 0xbac5d2, 1.25));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(-4, 9, 7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far = 40;
+sun.shadow.camera.left = -10;
+sun.shadow.camera.right = 10;
+sun.shadow.camera.top = 10;
+sun.shadow.camera.bottom = -10;
 scene.add(sun);
-scene.add(new THREE.DirectionalLight(0x445566, 0.5).translateX(5).translateY(8).translateZ(-5));
-// Extra fill from below
-scene.add(new THREE.HemisphereLight(0x6688aa, 0x1a2030, 0.4));
+const rim = new THREE.DirectionalLight(0xbfd7ff, 1.1);
+rim.position.set(5, 5, -8);
+scene.add(rim);
 
 // Headlights
 for(const x of [-0.5, 0.5]){
-  const hl = new THREE.SpotLight(0xffeedd, 2, 35, Math.PI*0.14, 0.5);
+  const hl = new THREE.SpotLight(0xffffff, 0.7, 28, Math.PI*0.13, 0.7);
   hl.position.set(x, 0.5, -1.5);
   const tgt = new THREE.Object3D(); tgt.position.set(x*2, 0, -20);
   scene.add(tgt); hl.target = tgt; scene.add(hl);
@@ -82,19 +96,19 @@ for(const x of [-0.5, 0.5]){
 
 // Ground
 const gnd = new THREE.Mesh(new THREE.PlaneGeometry(200,200),
-  new THREE.MeshStandardMaterial({color:0x101e12, roughness:0.9}));
-gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; scene.add(gnd);
+  new THREE.MeshStandardMaterial({color:0xE8EBEF, roughness:0.78}));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; gnd.receiveShadow = true; scene.add(gnd);
 
 // Road
 const RW=8, RL=200;
 const rd = new THREE.Mesh(new THREE.PlaneGeometry(RW, RL),
-  new THREE.MeshStandardMaterial({color:0x333a46, roughness:0.8}));
-rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); scene.add(rd);
+  new THREE.MeshStandardMaterial({color:0xD3DAE2, roughness:0.72}));
+rd.rotation.x=-Math.PI/2; rd.position.set(0, 0.005, -RL/2+10); rd.receiveShadow = true; scene.add(rd);
 
 // Edges
 for(const x of [-RW/2, RW/2]){
   const e = new THREE.Mesh(new THREE.PlaneGeometry(0.12, RL),
-    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.35}));
+    new THREE.MeshBasicMaterial({color:0x8F9BA8, transparent:true, opacity:0.55}));
   e.rotation.x=-Math.PI/2; e.position.set(x, 0.01, -RL/2+10); scene.add(e);
 }
 
@@ -102,24 +116,60 @@ for(const x of [-RW/2, RW/2]){
 const dG = new THREE.Group();
 for(let l=-1;l<=1;l++) for(let i=0;i<40;i++){
   const d = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 2),
-    new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.2}));
+    new THREE.MeshBasicMaterial({color:0x9CA8B6, transparent:true, opacity:0.55}));
   d.rotation.x=-Math.PI/2; d.position.set(l*RW/4, 0.01, -i*5); dG.add(d);
 }
 scene.add(dG);
 
 // Blue path
 const bp = new THREE.Mesh(new THREE.PlaneGeometry(1.5, RL),
-  new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.06}));
+  new THREE.MeshBasicMaterial({color:0x3B82F6, transparent:true, opacity:0.18}));
 bp.rotation.x=-Math.PI/2; bp.position.set(0, 0.007, -RL/2+10); scene.add(bp);
+
+const carShadow = new THREE.Mesh(new THREE.CircleGeometry(1.9, 64),
+  new THREE.MeshBasicMaterial({color:0x111827, transparent:true, opacity:0.08, depthWrite:false}));
+carShadow.rotation.x = -Math.PI/2;
+carShadow.scale.set(1.25, 0.55, 1);
+carShadow.position.set(0, 0.012, 0.2);
+scene.add(carShadow);
 
 // No buildings — performance optimization
 
 // Ego car
 let ego = null;
+function tuneEgoCar(root){
+  root.traverse(c=>{
+    if(!c.isMesh) return;
+    const name = `${c.name||''} ${c.material?.name||''}`.toLowerCase();
+    let color = 0xf1f3f5;
+    let roughness = 0.34;
+    let metalness = 0.18;
+    if(name.includes('glass') || name.includes('window') || name.includes('wind')) {
+      color = 0x111827; roughness = 0.18; metalness = 0.05;
+    } else if(name.includes('wheel') || name.includes('tire') || name.includes('tyre')) {
+      color = 0x16181d; roughness = 0.62; metalness = 0.08;
+    }
+    c.material = new THREE.MeshPhysicalMaterial({
+      color, roughness, metalness,
+      clearcoat: name.includes('glass') ? 0 : 0.55,
+      clearcoatRoughness: 0.28,
+      envMapIntensity: 0.9,
+    });
+    c.castShadow = true;
+    c.receiveShadow = true;
+    if(!(name.includes('glass') || name.includes('window') || name.includes('wind'))) {
+      const edges = new THREE.EdgesGeometry(c.geometry, 24);
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+        color:0x7b8490, transparent:true, opacity:0.18,
+      }));
+      c.add(line);
+    }
+  });
+}
 new GLTFLoader().load('https://hwkim3330.github.io/tabsla/models/lowpoly_car.glb', g=>{
-  ego = g.scene; ego.scale.set(1.2, 1.2, 1.2);
+  ego = g.scene; ego.scale.set(1.28, 1.28, 1.28);
   ego.position.set(0, 0.05, 0); ego.rotation.y = Math.PI;
-  ego.traverse(c=>{if(c.isMesh){c.castShadow=true; c.receiveShadow=true}});
+  tuneEgoCar(ego);
   scene.add(ego);
 });
 
@@ -224,10 +274,12 @@ addEventListener('resize',()=>{
     super.initState();
     _wv = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF121A24))
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) => setState(() => _loaded = true),
-      ))
+      ..setBackgroundColor(const Color(0xFFE8EBEF))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) => setState(() => _loaded = true),
+        ),
+      )
       ..loadHtmlString(_html);
   }
 
@@ -235,59 +287,160 @@ addEventListener('resize',()=>{
   void didUpdateWidget(SurroundView old) {
     super.didUpdateWidget(old);
     if (_loaded) {
-      final objs = widget.objects.map((o) => {'x': o.x, 'y': o.y, 'type': o.type}).toList();
-      _wv.runJavaScript("updateDrive(${widget.speed.toStringAsFixed(1)},${widget.steeringAngle.toStringAsFixed(1)},${jsonEncode(objs)})");
+      final objs = widget.objects
+          .map((o) => {'x': o.x, 'y': o.y, 'type': o.type})
+          .toList();
+      _wv.runJavaScript(
+        "updateDrive(${widget.speed.toStringAsFixed(1)},${widget.steeringAngle.toStringAsFixed(1)},${jsonEncode(objs)})",
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF121A24),
+      color: const Color(0xFFE8EBEF),
       child: Stack(
         children: [
           WebViewWidget(controller: _wv),
-          if (!_loaded) const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6))),
+          if (!_loaded)
+            const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFF3B82F6),
+              ),
+            ),
           // HUD
-          Positioned(top: 12, left: 16, child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: ['P','R','N','D'].map((g) {
-                final on = widget.gear == g;
-                return Container(width: 24, height: 24, margin: const EdgeInsets.only(right: 2),
-                  decoration: BoxDecoration(color: on ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(5)),
-                  child: Center(child: Text(g, style: TextStyle(
-                    color: on ? const Color(0xFF121A24) : Colors.white.withValues(alpha: 0.12),
-                    fontSize: 12, fontWeight: on ? FontWeight.w800 : FontWeight.w400, height: 1))));
-              }).toList()),
-              const SizedBox(height: 8),
-              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(widget.speed.toInt().toString(), style: const TextStyle(
-                  color: Colors.white, fontSize: 56, fontWeight: FontWeight.w200, height: 1, letterSpacing: -3,
-                  shadows: [Shadow(color: Colors.black87, blurRadius: 8)])),
-                Padding(padding: const EdgeInsets.only(bottom: 6, left: 5),
-                  child: Text('km/h', style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 13))),
-              ]),
-              if (widget.speed > 0) ...[const SizedBox(height: 8),
-                Container(width: 30, height: 30,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white,
-                    border: Border.all(color: const Color(0xFFDC2626), width: 3)),
-                  child: const Center(child: Text('60', style: TextStyle(color: Color(0xFF1F2937), fontSize: 11, fontWeight: FontWeight.w800, height: 1)))),
+          Positioned(
+            top: 12,
+            left: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: ['P', 'R', 'N', 'D'].map((g) {
+                    final on = widget.gear == g;
+                    return Container(
+                      width: 24,
+                      height: 24,
+                      margin: const EdgeInsets.only(right: 2),
+                      decoration: BoxDecoration(
+                        color: on ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Center(
+                        child: Text(
+                          g,
+                          style: TextStyle(
+                            color: on
+                                ? const Color(0xFF121A24)
+                                : const Color(
+                                    0xFF111827,
+                                  ).withValues(alpha: 0.16),
+                            fontSize: 12,
+                            fontWeight: on ? FontWeight.w800 : FontWeight.w400,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      widget.speed.toInt().toString(),
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 56,
+                        fontWeight: FontWeight.w200,
+                        height: 1,
+                        letterSpacing: -3,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6, left: 5),
+                      child: Text(
+                        'km/h',
+                        style: TextStyle(
+                          color: const Color(
+                            0xFF111827,
+                          ).withValues(alpha: 0.42),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.speed > 0) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFFDC2626),
+                        width: 3,
+                      ),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        '60',
+                        style: TextStyle(
+                          color: Color(0xFF1F2937),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          )),
-          Positioned(top: 12, right: 14, child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Row(children: [
-                Icon(Icons.battery_std, size: 15, color: widget.batteryLevel > 30 ? const Color(0xFF34D399) : const Color(0xFFEF4444)),
-                const SizedBox(width: 3),
-                Text('${widget.batteryLevel.toInt()}%', style: TextStyle(
-                  color: widget.batteryLevel > 30 ? const Color(0xFF34D399) : const Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600)),
-              ]),
-              Text('${widget.range.toInt()} km', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 10)),
-            ],
-          )),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 14,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.battery_std,
+                      size: 15,
+                      color: widget.batteryLevel > 30
+                          ? const Color(0xFF34D399)
+                          : const Color(0xFFEF4444),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${widget.batteryLevel.toInt()}%',
+                      style: TextStyle(
+                        color: widget.batteryLevel > 30
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFFEF4444),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${widget.range.toInt()} km',
+                  style: TextStyle(
+                    color: const Color(0xFF111827).withValues(alpha: 0.38),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

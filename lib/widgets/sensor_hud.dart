@@ -16,58 +16,120 @@ class SensorHud extends StatelessWidget {
 
   const SensorHud({
     super.key,
-    required this.lateralG, required this.longitudinalG, required this.totalG,
-    required this.compass, required this.noiseDb, required this.micActive,
-    required this.roll, required this.pitch,
-    required this.batteryTemp, required this.outsideTemp,
-    required this.humidity, required this.windSpeed,
-    required this.weatherDesc, required this.weatherLoaded,
+    required this.lateralG,
+    required this.longitudinalG,
+    required this.totalG,
+    required this.compass,
+    required this.noiseDb,
+    required this.micActive,
+    required this.roll,
+    required this.pitch,
+    required this.batteryTemp,
+    required this.outsideTemp,
+    required this.humidity,
+    required this.windSpeed,
+    required this.weatherDesc,
+    required this.weatherLoaded,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // G-Force
-          SizedBox(
-            width: 72, height: 72,
-            child: CustomPaint(painter: _GForcePainter(latG: lateralG.clamp(-2, 2), lonG: longitudinalG.clamp(-2, 2))),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          const SizedBox(height: 2),
-          _Label('${totalG.toStringAsFixed(1)}G', color: totalG > 1.3 ? const Color(0xFFF59E0B) : null),
-          const SizedBox(height: 10),
-
-          // Compass
-          _Row(Icons.explore_rounded, '${compass.toInt()}° ${_dir(compass)}'),
-
-          // Tilt
-          _Row(Icons.screen_rotation_rounded, '${(roll * 180 / pi).toStringAsFixed(0)}° tilt'),
-
-          // Noise
-          if (micActive)
-            _Row(Icons.mic_rounded, '${noiseDb.toInt()} dB',
-              color: noiseDb > 75 ? const Color(0xFFF59E0B) : null),
-
-          const SizedBox(height: 8),
-          // Divider
-          Container(width: 40, height: 0.5, color: Colors.white.withValues(alpha: 0.08)),
-          const SizedBox(height: 8),
-
-          // Battery temp
-          if (batteryTemp > 0)
-            _Row(Icons.thermostat_rounded, '${batteryTemp.toStringAsFixed(1)}°C',
-              sub: 'device', color: batteryTemp > 40 ? const Color(0xFFEF4444) : null),
-
-          // Weather
-          if (weatherLoaded) ...[
-            _Row(_weatherIcon(weatherDesc), '${outsideTemp.toStringAsFixed(1)}°C', sub: 'outside'),
-            _Row(Icons.water_drop_rounded, '${humidity.toInt()}%', sub: 'humid'),
-            _Row(Icons.air_rounded, '${windSpeed.toStringAsFixed(0)} km/h', sub: 'wind'),
-          ],
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // G-Force
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: CustomPaint(
+                  painter: _GForcePainter(
+                    latG: lateralG.clamp(-2, 2),
+                    lonG: longitudinalG.clamp(-2, 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              _Label(
+                '${totalG.toStringAsFixed(1)}G',
+                color: totalG > 1.3 ? const Color(0xFFF59E0B) : null,
+              ),
+              const SizedBox(height: 10),
+
+              // Compass
+              _Row(
+                Icons.explore_rounded,
+                '${compass.toInt()}° ${_dir(compass)}',
+              ),
+
+              // Tilt
+              _Row(
+                Icons.screen_rotation_rounded,
+                '${(roll * 180 / pi).toStringAsFixed(0)}° tilt',
+              ),
+
+              // Noise
+              if (micActive)
+                _Row(
+                  Icons.mic_rounded,
+                  '${noiseDb.toInt()} dB',
+                  color: noiseDb > 75 ? const Color(0xFFF59E0B) : null,
+                ),
+
+              const SizedBox(height: 8),
+              // Divider
+              Container(
+                width: 40,
+                height: 0.5,
+                color: const Color(0xFF111827).withValues(alpha: 0.08),
+              ),
+              const SizedBox(height: 8),
+
+              // Battery temp
+              if (batteryTemp > 0)
+                _Row(
+                  Icons.thermostat_rounded,
+                  '${batteryTemp.toStringAsFixed(1)}°C',
+                  sub: 'device',
+                  color: batteryTemp > 40 ? const Color(0xFFEF4444) : null,
+                ),
+
+              // Weather
+              if (weatherLoaded) ...[
+                _Row(
+                  _weatherIcon(weatherDesc),
+                  '${outsideTemp.toStringAsFixed(1)}°C',
+                  sub: 'outside',
+                ),
+                _Row(
+                  Icons.water_drop_rounded,
+                  '${humidity.toInt()}%',
+                  sub: 'humid',
+                ),
+                _Row(
+                  Icons.air_rounded,
+                  '${windSpeed.toStringAsFixed(0)} km/h',
+                  sub: 'wind',
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -79,12 +141,20 @@ class SensorHud extends StatelessWidget {
 
   IconData _weatherIcon(String desc) {
     switch (desc) {
-      case 'Clear': return Icons.wb_sunny_rounded;
-      case 'Cloudy': return Icons.cloud_rounded;
-      case 'Rain': case 'Drizzle': case 'Showers': return Icons.water_drop_rounded;
-      case 'Snow': return Icons.ac_unit_rounded;
-      case 'Storm': return Icons.thunderstorm_rounded;
-      default: return Icons.cloud_rounded;
+      case 'Clear':
+        return Icons.wb_sunny_rounded;
+      case 'Cloudy':
+        return Icons.cloud_rounded;
+      case 'Rain':
+      case 'Drizzle':
+      case 'Showers':
+        return Icons.water_drop_rounded;
+      case 'Snow':
+        return Icons.ac_unit_rounded;
+      case 'Storm':
+        return Icons.thunderstorm_rounded;
+      default:
+        return Icons.cloud_rounded;
     }
   }
 }
@@ -96,8 +166,14 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: TextStyle(
-      color: color ?? Colors.white.withValues(alpha: 0.3), fontSize: 9, fontWeight: FontWeight.w600));
+    return Text(
+      text,
+      style: TextStyle(
+        color: color ?? const Color(0xFF111827).withValues(alpha: 0.58),
+        fontSize: 9,
+        fontWeight: FontWeight.w600,
+      ),
+    );
   }
 }
 
@@ -110,15 +186,28 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Colors.white.withValues(alpha: 0.3);
+    final c = color ?? const Color(0xFF111827).withValues(alpha: 0.58);
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (sub != null)
-            Text('$sub ', style: TextStyle(color: Colors.white.withValues(alpha: 0.15), fontSize: 8)),
-          Text(value, style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w500)),
+            Text(
+              '$sub ',
+              style: TextStyle(
+                color: const Color(0xFF111827).withValues(alpha: 0.34),
+                fontSize: 8,
+              ),
+            ),
+          Text(
+            value,
+            style: TextStyle(
+              color: c,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(width: 4),
           Icon(icon, size: 11, color: c),
         ],
@@ -136,14 +225,32 @@ class _GForcePainter extends CustomPainter {
     final cx = size.width / 2, cy = size.height / 2;
     final r = size.width / 2 - 3;
 
-    canvas.drawCircle(Offset(cx, cy), r, Paint()..color = Colors.white.withValues(alpha: 0.04));
-    canvas.drawCircle(Offset(cx, cy), r, Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)..style = PaintingStyle.stroke..strokeWidth = 0.5);
-    canvas.drawCircle(Offset(cx, cy), r * 0.5, Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)..style = PaintingStyle.stroke..strokeWidth = 0.5);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()..color = const Color(0xFF111827).withValues(alpha: 0.04),
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()
+        ..color = const Color(0xFF111827).withValues(alpha: 0.08)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r * 0.5,
+      Paint()
+        ..color = const Color(0xFF111827).withValues(alpha: 0.05)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5,
+    );
 
     // Crosshair
-    final ch = Paint()..color = Colors.white.withValues(alpha: 0.04)..strokeWidth = 0.5;
+    final ch = Paint()
+      ..color = const Color(0xFF111827).withValues(alpha: 0.04)
+      ..strokeWidth = 0.5;
     canvas.drawLine(Offset(cx - r, cy), Offset(cx + r, cy), ch);
     canvas.drawLine(Offset(cx, cy - r), Offset(cx, cy + r), ch);
 
@@ -153,8 +260,13 @@ class _GForcePainter extends CustomPainter {
     final mag = sqrt(latG * latG + lonG * lonG);
     final dotC = mag > 0.5 ? const Color(0xFFF59E0B) : const Color(0xFF60A5FA);
 
-    canvas.drawCircle(Offset(cx + dx, cy + dy), 5, Paint()
-      ..color = dotC.withValues(alpha: 0.12)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawCircle(
+      Offset(cx + dx, cy + dy),
+      5,
+      Paint()
+        ..color = dotC.withValues(alpha: 0.12)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
     canvas.drawCircle(Offset(cx + dx, cy + dy), 2.5, Paint()..color = dotC);
   }
 

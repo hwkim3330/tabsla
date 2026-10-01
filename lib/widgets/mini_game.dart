@@ -11,16 +11,10 @@ class MiniGame extends StatefulWidget {
 }
 
 class _MiniGameState extends State<MiniGame> {
-  static const _cols = 10, _rows = 20;
-  late List<List<Color?>> _grid;
-  List<Offset> _current = [];
-  Color _currentColor = Colors.blue;
-  int _score = 0;
   bool _gameOver = false;
   Timer? _timer;
   double _carX = 0.5;
   int _carScore = 0;
-  bool _carMode = true; // Simple car dodge game
   final _rng = Random();
   final _obstacles = <_Obstacle>[];
 
@@ -42,7 +36,9 @@ class _MiniGameState extends State<MiniGame> {
           _obstacles.add(_Obstacle(x: _rng.nextDouble() * 0.8 + 0.1, y: -0.05));
         }
         // Move obstacles
-        for (final o in _obstacles) o.y += 0.015;
+        for (final o in _obstacles) {
+          o.y += 0.015;
+        }
         _obstacles.removeWhere((o) => o.y > 1.1);
         // Collision
         for (final o in _obstacles) {

@@ -34,7 +34,7 @@ class VehicleState extends ChangeNotifier {
   double _power = 0;
   double _steeringAngle = 0;
   double _insideTemp = 22;
-  double _outsideTemp = 18;
+  final double _outsideTemp = 18;
   bool _acOn = true;
   String _currentStreet = '';
   double _tripDistance = 0;
@@ -82,15 +82,11 @@ class VehicleState extends ChangeNotifier {
   // Navigation route for sim to follow
   List<LatLng>? _navRoute;
   List<LatLng>? get navRoute => _navRoute;
-  double _navTotalDist = 0; // meters
-  double _navTotalDuration = 0; // seconds
   double _navAvgSpeed = 50; // km/h calculated from route
 
   void setNavRoute(List<LatLng> route, {double totalDist = 0, double totalDuration = 0}) {
     if (route.length < 2) return;
     _navRoute = route;
-    _navTotalDist = totalDist;
-    _navTotalDuration = totalDuration;
     // Calculate average speed from route data
     if (totalDuration > 0 && totalDist > 0) {
       _navAvgSpeed = (totalDist / 1000) / (totalDuration / 3600); // km/h
